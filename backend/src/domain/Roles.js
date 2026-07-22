@@ -1,6 +1,6 @@
 const Roles = Object.freeze({
     ADMIN:'ROLE_ADMIN',
-    CUSTOMER:'ROLE_CUSTOMER',
+    BUYER:'ROLE_BUYER',
     SELLER:'ROLE_SELLER'
 })
 
