@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, MoreVertical, Send, Smile, Leaf, Search, X } from 'lucide-react';
+import { ArrowLeftRight, MoreVertical, Send, Smile, Leaf, Search, X, ArrowLeft } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
@@ -11,6 +11,7 @@ export const MessagesPage = ({ currentPage, setCurrentPage, triggerToast }) => {
   const [typedMessage, setTypedMessage] = useState('');
   const [contactSearch, setContactSearch] = useState('');
   const [activeConvId, setActiveConvId] = useState('biopack_1');
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
   const [chatHistories, setChatHistories] = useState({
     biopack_1: [
       { id: 1, sender: 'me', text: 'Hi BioPack, confirmed pickup for 120kg coffee grounds tomorrow?', time: '9:38 PM', status: 'Sent' },
@@ -103,7 +104,7 @@ export const MessagesPage = ({ currentPage, setCurrentPage, triggerToast }) => {
 
           <div className="inbox-panel-grid">
             {/* Column 1: Conversations List */}
-            <div className="conversations-col">
+            <div className={`conversations-col ${showChatOnMobile ? 'mobile-hidden' : 'mobile-visible'}`}>
               <div className="conversations-header">CONVERSATIONS</div>
 
               <div className="conv-search-wrapper">
@@ -134,7 +135,10 @@ export const MessagesPage = ({ currentPage, setCurrentPage, triggerToast }) => {
                   <li key={item.id}>
                     <button 
                       className={`conversation-item-btn ${activeConvId === item.id ? 'active' : ''}`}
-                      onClick={() => setActiveConvId(item.id)}
+                      onClick={() => {
+                        setActiveConvId(item.id);
+                        setShowChatOnMobile(true);
+                      }}
                     >
                       {item.avatarType === 'user' && (
                         <div className="conv-avatar-wrapper">
@@ -170,9 +174,17 @@ export const MessagesPage = ({ currentPage, setCurrentPage, triggerToast }) => {
             </div>
 
             {/* Column 2: Chat Display */}
-            <div className="chat-col">
+            <div className={`chat-col ${showChatOnMobile ? 'mobile-visible' : 'mobile-hidden'}`}>
               <div className="chat-header">
                 <div className="chat-partner-info">
+                  <button 
+                    type="button" 
+                    className="chat-mobile-back-btn" 
+                    onClick={() => setShowChatOnMobile(false)}
+                    aria-label="Back to conversations list"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
                   <div className="chat-partner-avatar">
                     {activeConvId.startsWith('biopack') ? <PackagingIcon size={18} /> : <Leaf size={16} fill="currentColor" />}
                   </div>
@@ -237,7 +249,7 @@ export const MessagesPage = ({ currentPage, setCurrentPage, triggerToast }) => {
 
           </div>
         </div>
-        <Footer variant="compact" triggerToast={triggerToast} />
+        <Footer variant="compact" triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
       </main>
     </div>
   );

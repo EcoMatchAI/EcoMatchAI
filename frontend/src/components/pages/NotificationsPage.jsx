@@ -127,7 +127,7 @@ export const NotificationsPage = ({ currentPage, setCurrentPage, triggerToast })
           </div>
         </div>
 
-        <Footer variant="compact" triggerToast={triggerToast} />
+        <Footer variant="compact" triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
       </main>
     </div>
   );

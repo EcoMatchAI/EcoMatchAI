@@ -46,15 +46,15 @@ export const LandingPage = ({ setCurrentPage, triggerToast }) => {
           </div>
 
           <div className="landing-navbar-actions">
-            <button className="landing-loc-btn" onClick={(e) => e.preventDefault()}>
+             <button className="landing-loc-btn" onClick={(e) => e.preventDefault()}>
               <Globe size={18} />
               Pune, India
               <ChevronDown size={14} />
-            </button>
+            </button> 
 
-            <button className="landing-icon-btn" aria-label="Notifications" onClick={(e) => e.preventDefault()}>
+            {/*<button className="landing-icon-btn" aria-label="Notifications" onClick={(e) => e.preventDefault()}>
               <Bell size={20} />
-            </button>
+            </button> */}
 
             <button className="landing-btn-started" onClick={() => setCurrentPage('signin')}>
               Get Started
@@ -172,8 +172,8 @@ export const LandingPage = ({ setCurrentPage, triggerToast }) => {
                 <Box size={24} />
               </div>
               <div className="landing-stat-info">
-                <span className="landing-stat-val">12.4 Tons</span>
-                <span className="landing-stat-lbl">Waste Diverted</span>
+                <span className="landing-stat-val">12.4</span>
+                <span className="landing-stat-lbl">Tonnes of Waste Diverted</span>
               </div>
             </div>
 
@@ -184,8 +184,8 @@ export const LandingPage = ({ setCurrentPage, triggerToast }) => {
                 <Cloud size={24} />
               </div>
               <div className="landing-stat-info">
-                <span className="landing-stat-val">34.7 Tons</span>
-                <span className="landing-stat-lbl">CO₂ Saved</span>
+                <span className="landing-stat-val">34.7</span>
+                <span className="landing-stat-lbl">Tonnes of CO₂ Saved</span>
               </div>
             </div>
 
@@ -348,8 +348,8 @@ export const LandingPage = ({ setCurrentPage, triggerToast }) => {
                 <Box size={18} />
               </div>
               <div className="mobile-stat-info">
-                <span className="mobile-stat-val">12.4 Tons</span>
-                <span className="mobile-stat-lbl">Waste Diverted</span>
+                <span className="mobile-stat-val">12.4</span>
+                <span className="mobile-stat-lbl">Tonnes of Waste Diverted</span>
               </div>
             </div>
             <div className="mobile-stat-item">
@@ -357,8 +357,8 @@ export const LandingPage = ({ setCurrentPage, triggerToast }) => {
                 <Cloud size={18} />
               </div>
               <div className="mobile-stat-info">
-                <span className="mobile-stat-val">34.7 Tons</span>
-                <span className="mobile-stat-lbl">CO₂ Saved</span>
+                <span className="mobile-stat-val">34.7</span>
+                <span className="mobile-stat-lbl">Tonnes of CO₂ Saved</span>
               </div>
             </div>
             <div className="mobile-stat-item">

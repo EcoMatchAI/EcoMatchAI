@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Leaf, Recycle, User } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Recycle, User } from 'lucide-react';
 import {
   BackgroundWaves, SignInLogo, DotGrid, FactoryIllustration, GoogleIcon,
   LinkedInIcon, WindTurbineIllustration
 } from '../common/Icons';
+import { apiSignup, setToken } from '../../lib/api';
 
 export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
   const [signupName, setSignupName] = useState('');
@@ -15,7 +16,7 @@ export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [signUpLoading, setSignUpLoading] = useState(false);
 
-  const handleSignUpSubmit = (e) => {
+  const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     if (!signupName.trim()) {
       triggerToast('Please enter your company or full name.', 'error');
@@ -43,13 +44,24 @@ export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
     }
 
     setSignUpLoading(true);
-    setTimeout(() => {
-      setSignUpLoading(false);
-      triggerToast(`Account created successfully! Welcome to EcoMatch.`);
+    try {
+      const data = await apiSignup({
+        name: signupName.trim(),
+        email: signupEmail.trim(),
+        password: signupPassword,
+        confirmPassword: signupConfirmPassword,
+      });
+      setToken(data.token);
+      triggerToast(data.message || 'Account created! Please verify your email.');
       setTimeout(() => {
-        setCurrentPage('preferences');
-      }, 1500);
-    }, 1500);
+        // Email must be verified before anything else — go to the gate page.
+        setCurrentPage('checkEmail');
+      }, 1200);
+    } catch (err) {
+      triggerToast(err.message || 'Sign up failed. Please try again.', 'error');
+    } finally {
+      setSignUpLoading(false);
+    }
   };
 
   return (
@@ -236,20 +248,6 @@ export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
 
       {/* RIGHT COLUMN */}
       <aside className="sidebar-right">
-        <div className="stat-widget">
-          <div className="widget-icon-container">
-            <Leaf size={22} fill="currentColor" />
-          </div>
-          <div className="widget-content">
-            <span className="widget-title">CO₂ Impact Saved</span>
-            <div className="widget-value-container">
-              <span className="widget-value">34.7</span>
-              <span className="widget-unit">Tons</span>
-            </div>
-            <span className="widget-change">+21% this month</span>
-          </div>
-        </div>
-
         <div className="quote-container" style={{ margin: 'auto 0 0 0', position: 'relative' }}>
           <span className="quote-mark open" style={{ top: '-45px', left: '-20px' }}>“</span>
           <p className="quote-text">

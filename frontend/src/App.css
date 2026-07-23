@@ -752,6 +752,10 @@
   @apply flex-1 flex flex-col bg-white;
 }
 
+.chat-mobile-back-btn {
+  display: none;
+}
+
 .chat-header {
   @apply h-14 px-5 border-b border-[#E5E7EB] flex items-center justify-between;
 }
@@ -1567,10 +1571,45 @@
     @apply flex-none flex-col h-auto;
   }
   .conversations-col {
-    @apply w-full max-h-[230px] border-r-0 border-b border-[#E5E7EB];
+    @apply w-full border-r-0 border-[#E5E7EB];
   }
   .chat-col {
-    @apply w-full min-h-[380px] border-r-0;
+    @apply w-full border-r-0;
+  }
+
+  .chat-mobile-back-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #4B5563;
+    padding: 6px;
+    margin-right: 8px;
+    border-radius: 9999px;
+    transition: background-color 0.2s;
+  }
+  .chat-mobile-back-btn:hover {
+    background-color: #F3F4F6;
+  }
+
+  .conversations-col.mobile-hidden {
+    display: none !important;
+  }
+  .chat-col.mobile-hidden {
+    display: none !important;
+  }
+  
+  .conversations-col.mobile-visible {
+    display: flex !important;
+    width: 100% !important;
+    max-height: none !important;
+  }
+  .chat-col.mobile-visible {
+    display: flex !important;
+    width: 100% !important;
+    min-height: calc(100vh - 200px) !important;
   }
   .chat-messages-container {
     @apply min-h-[240px];

@@ -276,7 +276,7 @@ export const CreateListingPage = ({ currentPage, setCurrentPage, triggerToast, l
           </form>
         </div>
 
-        <Footer variant="compact" triggerToast={triggerToast} />
+        <Footer variant="compact" triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
       </main>
     </div>
   );
