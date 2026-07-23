@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const UserRoles= require('../domain/Roles');
-const UserRoles= require('../domain/accountStatus');
+const accountStatus= require('../domain/accountStatus');
 
 const sellerSchema =  mongoose.Schema({
     businessName: {
@@ -38,9 +38,9 @@ const sellerSchema =  mongoose.Schema({
             required:true
         },
     },
-location:[{
+address:[{
     type:mongoose.Schema.Types.ObjectId,
-    ref:"Location"
+    ref:"Address"
 
 }],
 GSTIN:{
