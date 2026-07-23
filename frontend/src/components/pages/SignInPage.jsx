@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Leaf, Recycle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Recycle } from 'lucide-react';
 import {
   BackgroundWaves, SignInLogo, DotGrid, FactoryIllustration, GoogleIcon,
   LinkedInIcon, WindTurbineIllustration
 } from '../common/Icons';
+import { apiLogin, setToken } from '../../lib/api';
 
 export const SignInPage = ({ setCurrentPage, triggerToast }) => {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ export const SignInPage = ({ setCurrentPage, triggerToast }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [signInLoading, setSignInLoading] = useState(false);
 
-  const handleSignInSubmit = (e) => {
+  const handleSignInSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
       triggerToast('Please enter your email address.', 'error');
@@ -22,15 +23,30 @@ export const SignInPage = ({ setCurrentPage, triggerToast }) => {
       triggerToast('Please enter your password.', 'error');
       return;
     }
-    
+
     setSignInLoading(true);
-    setTimeout(() => {
-      setSignInLoading(false);
-      triggerToast(`Welcome back! Successfully logged in. Redirecting to Business Profile...`);
+    try {
+      const data = await apiLogin({ email: email.trim(), password });
+      setToken(data.token);
+      const verified = data.user?.isEmailVerified;
+      const done = data.user?.profileCompleted;
+      triggerToast(
+        !verified
+          ? 'Please verify your email to continue.'
+          : done
+          ? 'Welcome back! Redirecting to your dashboard...'
+          : 'Welcome back! Let’s finish setting up your profile...'
+      );
       setTimeout(() => {
-        setCurrentPage('preferences');
-      }, 1500);
-    }, 1500);
+        // Email not verified -> gate page; else onboarded -> dashboard, otherwise profile.
+        if (!verified) setCurrentPage('checkEmail');
+        else setCurrentPage(done ? 'dashboard' : 'preferences');
+      }, 1200);
+    } catch (err) {
+      triggerToast(err.message || 'Sign in failed. Please try again.', 'error');
+    } finally {
+      setSignInLoading(false);
+    }
   };
 
   return (
@@ -174,20 +190,6 @@ export const SignInPage = ({ setCurrentPage, triggerToast }) => {
 
       {/* RIGHT COLUMN */}
       <aside className="sidebar-right">
-        <div className="stat-widget">
-          <div className="widget-icon-container">
-            <Leaf size={22} fill="currentColor" />
-          </div>
-          <div className="widget-content">
-            <span className="widget-title">CO₂ Impact Saved</span>
-            <div className="widget-value-container">
-              <span className="widget-value">34.7</span>
-              <span className="widget-unit">Tons</span>
-            </div>
-            <span className="widget-change">+21% this month</span>
-          </div>
-        </div>
-
         <div className="quote-container" style={{ margin: 'auto 0 0 0', position: 'relative' }}>
           <span className="quote-mark open" style={{ top: '-45px', left: '-20px' }}>“</span>
           <p className="quote-text">

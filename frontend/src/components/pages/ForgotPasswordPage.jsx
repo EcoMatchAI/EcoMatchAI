@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, ArrowLeft, Leaf, Recycle, MailCheck } from 'lucide-react';
+import { Mail, ArrowLeft, Recycle, MailCheck } from 'lucide-react';
 import {
   BackgroundWaves, SignInLogo, DotGrid, FactoryIllustration,
   WindTurbineIllustration
@@ -132,20 +132,6 @@ export const ForgotPasswordPage = ({ setCurrentPage, triggerToast }) => {
 
       {/* RIGHT COLUMN */}
       <aside className="sidebar-right">
-        <div className="stat-widget">
-          <div className="widget-icon-container">
-            <Leaf size={22} fill="currentColor" />
-          </div>
-          <div className="widget-content">
-            <span className="widget-title">CO₂ Impact Saved</span>
-            <div className="widget-value-container">
-              <span className="widget-value">34.7</span>
-              <span className="widget-unit">Tons</span>
-            </div>
-            <span className="widget-change">+21% this month</span>
-          </div>
-        </div>
-
         <div className="quote-container" style={{ margin: 'auto 0 0 0', position: 'relative' }}>
           <span className="quote-mark open" style={{ top: '-45px', left: '-20px' }}>“</span>
           <p className="quote-text">

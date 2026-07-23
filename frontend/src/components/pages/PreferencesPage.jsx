@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Globe, ChevronDown, Bell, Check, Building2, MapPin, Ruler,
   BadgeCheck, UploadCloud, Users, Factory, Boxes, Gauge
@@ -9,9 +9,44 @@ import {
 } from '../common/Icons';
 import Footer from '../common/Footer';
 import avatarImg from '../../assets/avatar.png';
+import { apiGetMe, apiCompleteProfile, isLoggedIn } from '../../lib/api';
 
 export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
   const [activeStep, setActiveStep] = useState('business'); // 'business' | 'materials'
+  const [saving, setSaving] = useState(false);
+
+  // A user may complete their profile only once. If they're already done,
+  // bounce them to the dashboard instead of letting them re-onboard.
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      triggerToast('Please sign in first.', 'error');
+      setCurrentPage('signin');
+      return;
+    }
+    let cancelled = false;
+    apiGetMe()
+      .then(({ user }) => {
+        if (cancelled) return;
+        // Email must be verified before completing the profile.
+        if (!user?.isEmailVerified) {
+          triggerToast('Please verify your email first.', 'error');
+          setCurrentPage('checkEmail');
+          return;
+        }
+        if (user?.profileCompleted) {
+          triggerToast('Your profile is already complete.');
+          setCurrentPage('dashboard');
+        }
+      })
+      .catch((err) => {
+        if (!cancelled && err.status === 401) {
+          triggerToast('Session expired. Please sign in again.', 'error');
+          setCurrentPage('signin');
+        }
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [selectedBusinessTypes, setSelectedBusinessTypes] = useState({
     generator: true,
@@ -114,16 +149,47 @@ export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
     }
   };
 
-  const handleSavePreferences = () => {
+  const handleSavePreferences = async () => {
     if (!validateBusinessStep()) {
       setActiveStep('business');
       return;
     }
-    const activeMaterials = materials.filter(m => m.selection !== 'none');
-    triggerToast(`Profile saved as ${roleLabel}! ${activeMaterials.length} material interests selected.`);
-    setTimeout(() => {
-      setCurrentPage('listingsDetails');
-    }, 1500);
+
+    // Strip non-serializable React icon elements before sending to the API.
+    const materialsPayload = materials.map(({ id, name, selection }) => ({ id, name, selection }));
+
+    const payload = {
+      businessTypes: { generator: isGenerator, upcycler: isUpcycler },
+      businessDetails,
+      generatorInfo,
+      upcyclerInfo,
+      materials: materialsPayload,
+    };
+
+    setSaving(true);
+    try {
+      const data = await apiCompleteProfile(payload);
+      const activeMaterials = materialsPayload.filter(m => m.selection !== 'none');
+      triggerToast(
+        data.message || `Profile saved as ${roleLabel}! ${activeMaterials.length} material interests selected.`
+      );
+      setTimeout(() => {
+        setCurrentPage('dashboard');
+      }, 1200);
+    } catch (err) {
+      if (err.status === 401) {
+        triggerToast('Session expired. Please sign in again.', 'error');
+        setCurrentPage('signin');
+      } else if (err.status === 409) {
+        // Already completed elsewhere — treat as done.
+        triggerToast('Your profile is already complete.');
+        setCurrentPage('dashboard');
+      } else {
+        triggerToast(err.message || 'Could not save your profile. Please try again.', 'error');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -519,8 +585,8 @@ export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
                 Continue to Materials →
               </button>
             ) : (
-              <button className="btn-save" onClick={handleSavePreferences}>
-                Save & Continue
+              <button className="btn-save" onClick={handleSavePreferences} disabled={saving}>
+                {saving ? 'Saving...' : 'Save & Continue'}
               </button>
             )}
           </div>
@@ -528,7 +594,7 @@ export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
         </div>
       </main>
 
-      <Footer triggerToast={triggerToast} />
+      <Footer triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
     </div>
   );
 };

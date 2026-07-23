@@ -256,15 +256,15 @@
 }
 
 .cl-input-combo {
-  @apply flex gap-2;
+  @apply flex gap-2 w-full min-w-0;
 }
 
 .cl-input-combo .pref-input {
-  @apply flex-1;
+  @apply flex-1 min-w-0;
 }
 
 .cl-unit-select {
-  @apply w-[120px] flex-shrink-0;
+  @apply w-[104px] flex-shrink-0;
 }
 
 .cl-actions {
@@ -548,4 +548,311 @@
 
 .notif-unread-dot {
   @apply w-2.5 h-2.5 rounded-full bg-[#059669] flex-shrink-0 mt-1.5;
+}
+
+/* ============================================================================
+   MY LISTINGS — MANAGE LISTING CARD (detail view)
+   ============================================================================ */
+.manage-listing-card {
+  @apply bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-[0_2px_10px_rgba(15,23,42,0.03)] flex flex-col gap-4;
+}
+
+.manage-listing-title {
+  @apply text-lg font-extrabold text-[#0F172A];
+}
+
+.manage-listing-sub {
+  @apply text-[13px] text-[#64748B] font-medium leading-relaxed -mt-2;
+}
+
+.manage-listing-btns {
+  @apply flex gap-3;
+}
+
+.btn-edit-details {
+  @apply flex-1 inline-flex items-center justify-center gap-2 bg-[#059669] text-white text-sm font-bold py-3 rounded-xl cursor-pointer border-none transition-colors duration-200;
+}
+
+.btn-edit-details:hover {
+  @apply bg-[#047857];
+}
+
+.btn-share-listing {
+  @apply flex-1 inline-flex items-center justify-center gap-2 bg-white text-[#334155] text-sm font-bold py-3 rounded-xl cursor-pointer border border-[#E2E8F0] transition-all duration-200;
+}
+
+.btn-share-listing:hover {
+  @apply border-[#A7F3D0] text-[#059669] bg-[#F0FDF4];
+}
+
+.manage-listing-meta {
+  @apply flex flex-col gap-2.5 pt-4 border-t border-[#F1F5F9];
+}
+
+.manage-meta-row {
+  @apply flex items-center justify-between text-[13px];
+}
+
+.manage-meta-row > span:first-child {
+  @apply font-semibold text-[#94A3B8];
+}
+
+.manage-meta-row strong {
+  @apply font-bold text-[#1E293B];
+}
+
+/* ============================================================================
+   SHARE LISTING MODAL
+   ============================================================================ */
+.share-overlay {
+  @apply fixed inset-0 z-[9000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm font-plus-jakarta;
+  animation: feedbackFadeIn 0.2s ease-out;
+}
+
+.share-modal {
+  @apply w-full max-w-[440px] bg-white rounded-2xl shadow-[0_24px_70px_rgba(0,0,0,0.35)] p-6 flex flex-col gap-4;
+  animation: feedbackPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.share-modal-header {
+  @apply flex items-start justify-between gap-4;
+}
+
+.share-modal-title {
+  @apply text-lg font-extrabold text-[#0F172A];
+}
+
+.share-modal-sub {
+  @apply text-[13px] text-[#64748B] mt-0.5;
+}
+
+.share-close-btn {
+  @apply flex items-center justify-center w-8 h-8 rounded-full text-[#94A3B8] bg-[#F8FAFC] border-none cursor-pointer flex-shrink-0 transition-colors duration-200;
+}
+
+.share-close-btn:hover {
+  @apply text-[#0F172A] bg-[#F1F5F9];
+}
+
+.share-section-label {
+  @apply text-xs font-extrabold uppercase tracking-wider text-[#94A3B8] mt-1;
+}
+
+.share-contacts {
+  @apply flex gap-3 overflow-x-auto pb-1;
+}
+
+.share-contact {
+  @apply flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer flex-shrink-0 w-[72px];
+}
+
+.share-contact-avatar {
+  @apply w-12 h-12 rounded-full object-cover border-2 border-[#E2E8F0] transition-all duration-200;
+}
+
+.share-contact:hover .share-contact-avatar {
+  @apply border-[#059669];
+}
+
+.share-contact-name {
+  @apply text-[11px] font-semibold text-[#475569] text-center leading-tight truncate w-full;
+}
+
+.share-socials {
+  @apply grid grid-cols-2 gap-2.5;
+}
+
+.share-social {
+  @apply inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-[#E2E8F0] bg-white text-[13px] font-bold text-[#334155] cursor-pointer transition-all duration-200;
+}
+
+.share-social:hover {
+  @apply border-[#CBD5E1] bg-[#F8FAFC];
+}
+
+.share-social.whatsapp { @apply text-[#25D366]; }
+.share-social.x { @apply text-[#0F172A]; }
+.share-social.instagram { @apply text-[#E1306C]; }
+.share-social.linkedin { @apply text-[#0A66C2]; }
+.share-social.copy { @apply text-[#059669]; }
+
+/* ============================================================================
+   PROFILE — EDITABLE PERSONAL DETAILS
+   ============================================================================ */
+.profile-edit-link {
+  @apply inline-flex items-center gap-1.5 text-[13px] font-bold text-[#059669] bg-transparent border-none cursor-pointer transition-colors duration-200;
+}
+
+.profile-edit-link:hover {
+  @apply text-[#047857];
+}
+
+.profile-edit-actions {
+  @apply flex items-center gap-2;
+}
+
+.profile-cancel-btn {
+  @apply inline-flex items-center gap-1.5 text-[13px] font-bold text-[#64748B] bg-white border border-[#E2E8F0] rounded-lg px-3 py-1.5 cursor-pointer transition-colors duration-200;
+}
+
+.profile-cancel-btn:hover {
+  @apply bg-[#F8FAFC] text-[#0F172A];
+}
+
+.profile-save-btn {
+  @apply inline-flex items-center gap-1.5 text-[13px] font-bold text-white bg-[#059669] border-none rounded-lg px-3.5 py-1.5 cursor-pointer transition-colors duration-200;
+}
+
+.profile-save-btn:hover {
+  @apply bg-[#047857];
+}
+
+.profile-details-grid {
+  @apply grid grid-cols-2 gap-x-5 gap-y-4;
+}
+
+.profile-detail-item {
+  @apply flex flex-col gap-1.5 min-w-0;
+}
+
+.profile-detail-label {
+  @apply flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#94A3B8];
+}
+
+.profile-detail-label svg {
+  @apply text-[#CBD5E1];
+}
+
+.profile-detail-value {
+  @apply text-[14px] font-bold text-[#1E293B] truncate;
+}
+
+.profile-account-actions {
+  @apply flex flex-col gap-2.5;
+}
+
+.profile-account-btn {
+  @apply inline-flex items-center gap-2 w-full bg-white border border-[#E2E8F0] text-[#334155] text-[13.5px] font-bold px-4 py-3 rounded-xl cursor-pointer transition-all duration-200;
+}
+
+.profile-account-btn:hover {
+  @apply border-[#A7F3D0] text-[#059669] bg-[#F0FDF4];
+}
+
+@media (max-width: 560px) {
+  .profile-details-grid { @apply grid-cols-1; }
+  .share-socials { @apply grid-cols-1; }
+}
+
+/* ============================================================================
+   PROFILE — REDESIGNED HERO / COMPLETION / CONTACT
+   ============================================================================ */
+.profile-hero {
+  @apply bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden shadow-[0_2px_10px_rgba(15,23,42,0.03)] mb-5;
+}
+
+.profile-hero-cover {
+  @apply h-24 w-full;
+  background: linear-gradient(120deg, #064E3B 0%, #059669 55%, #34D399 100%);
+}
+
+.profile-hero-body {
+  @apply flex items-end gap-5 px-6 flex-wrap pb-5;
+  margin-top: -40px;
+}
+
+.profile-hero-avatar {
+  @apply relative w-[88px] h-[88px] rounded-2xl border-4 border-white overflow-hidden bg-[#E2E8F0] flex-shrink-0 shadow-md;
+}
+
+.profile-hero-avatar img {
+  @apply w-full h-full object-cover;
+}
+
+.profile-hero-online {
+  @apply absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#22C55E] border-2 border-white;
+}
+
+.profile-hero-info {
+  @apply flex flex-col gap-2 flex-grow pb-1 min-w-0;
+}
+
+.profile-hero-name-row {
+  @apply flex items-center gap-2.5 flex-wrap;
+}
+
+.profile-hero-name {
+  @apply text-2xl font-extrabold text-[#0F172A];
+}
+
+.profile-hero-meta {
+  @apply flex items-center gap-2 flex-wrap text-[13px] font-semibold text-[#64748B];
+}
+
+.profile-hero-meta > span {
+  @apply inline-flex items-center gap-1.5;
+}
+
+.profile-hero-dot {
+  @apply text-[#CBD5E1];
+}
+
+.profile-hero-tags {
+  @apply flex items-center gap-2 flex-wrap;
+}
+
+.profile-hero-rating {
+  @apply inline-flex items-center gap-1 text-xs font-bold text-[#F59E0B];
+}
+
+.profile-hero-edit {
+  @apply inline-flex items-center gap-1.5 self-center bg-white border border-[#E2E8F0] text-[#374151] text-sm font-bold px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 whitespace-nowrap;
+}
+
+.profile-hero-edit:hover {
+  @apply border-[#A7F3D0] text-[#059669] bg-[#F0FDF4];
+}
+
+.profile-completion {
+  @apply px-6 pb-5 flex flex-col gap-2;
+}
+
+.profile-completion-top {
+  @apply flex items-center justify-between text-[13px];
+}
+
+.profile-completion-top span {
+  @apply font-semibold text-[#64748B];
+}
+
+.profile-completion-top strong {
+  @apply font-extrabold text-[#059669];
+}
+
+.profile-completion-track {
+  @apply h-2 w-full rounded-full bg-[#F1F5F9] overflow-hidden;
+}
+
+.profile-completion-fill {
+  @apply h-full rounded-full bg-gradient-to-r from-[#22C55E] to-[#059669];
+}
+
+.profile-contact-list {
+  @apply flex flex-col gap-2 mb-4;
+}
+
+.profile-contact-row {
+  @apply flex items-center gap-3 p-2.5 rounded-xl border border-[#F1F5F9] no-underline transition-colors duration-200;
+}
+
+.profile-contact-row:hover {
+  @apply bg-[#F9FAFB];
+}
+
+.profile-contact-icon {
+  @apply flex items-center justify-center w-9 h-9 rounded-lg bg-[#ECFDF5] text-[#059669] flex-shrink-0;
+}
+
+.profile-contact-val {
+  @apply text-[13.5px] font-bold text-[#1E293B] truncate;
 }

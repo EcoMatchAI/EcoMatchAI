@@ -30,9 +30,13 @@
   --background-image-bg-dark-gradient: radial-gradient(circle at 50% 50%, #02362b 0%, #001c15 100%);
 }
 
-/* Base Reset */
-*, *::before, *::after {
-  @apply box-border m-0 p-0;
+/* Base Reset — kept in the `base` layer so Tailwind utility classes
+   (px-*, py-*, p-*, m-*, mt-*, …) still override it. If this lives unlayered,
+   it beats every layered utility and zeroes out all padding/margins. */
+@layer base {
+  *, *::before, *::after {
+    @apply box-border m-0 p-0;
+  }
 }
 
 html, body {
@@ -594,7 +598,7 @@ html, body {
 }
 
 .pref-field {
-  @apply flex flex-col gap-2;
+  @apply flex flex-col gap-2 min-w-0;
 }
 
 .pref-field-full {
