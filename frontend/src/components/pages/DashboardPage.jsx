@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Plus, Package, Recycle, IndianRupee, Box, Cloud, ArrowUpRight,
+  Plus, Package, Recycle, IndianRupee, CheckCircle2, ArrowUpRight,
   MessageSquare, MapPin, ArrowRight, Eye, Bell, Search
 } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
@@ -19,9 +19,9 @@ const STAT_CARDS = [
 ];
 
 const IMPACT = [
-  { label: 'Waste Diverted', value: '12.4 Tons', icon: <Box size={18} /> },
-  { label: 'CO₂ Saved', value: '34.7 Tons', icon: <Cloud size={18} /> },
   { label: 'Materials Listed', value: '6 Streams', icon: <Package size={18} /> },
+  { label: 'Completed Deals', value: '48', icon: <CheckCircle2 size={18} /> },
+  { label: 'Avg. Match Score', value: '91%', icon: <Recycle size={18} /> },
 ];
 
 const MY_LISTINGS = [
@@ -172,7 +172,7 @@ export const DashboardPage = ({ currentPage, setCurrentPage, triggerToast }) => 
           </div>
         </div>
 
-        <Footer variant="compact" triggerToast={triggerToast} />
+        <Footer variant="compact" triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
       </main>
     </div>
   );

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Share2, X, Copy, MessageCircle } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
+import avatarImg from '../../assets/avatar.png';
 
 import coffeeImg from '../../assets/coffee_grounds.png';
 import fabricImg from '../../assets/fabric_waste.png';
@@ -76,8 +77,16 @@ const LISTINGS_DATA = [
   }
 ];
 
+const SHARE_CONTACTS = [
+  { id: 'greenbrew', name: 'GreenBrew Co.' },
+  { id: 'biopack', name: 'BioPack Solutions' },
+  { id: 'ecoinsulate', name: 'EcoInsulate Ltd.' },
+  { id: 'artisan', name: 'Artisan Toys Inc.' },
+];
+
 export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast, setListingDraft }) => {
   const [selectedListingId, setSelectedListingId] = useState(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const startCreate = () => {
     setListingDraft?.(null);
@@ -90,6 +99,21 @@ export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast,
   };
 
   const activeListing = LISTINGS_DATA.find(item => item.id === selectedListingId);
+
+  const shareToContact = (contact) => {
+    setShareOpen(false);
+    triggerToast(`"${activeListing.shortTitle}" shared with ${contact.name} in your inbox.`);
+    setCurrentPage('messages');
+  };
+
+  const shareVia = (platform) => {
+    setShareOpen(false);
+    if (platform === 'Copy link') {
+      triggerToast('Listing link copied to clipboard!');
+    } else {
+      triggerToast(`Sharing "${activeListing.shortTitle}" via ${platform}...`);
+    }
+  };
 
   return (
     <div className="inbox-page-wrapper">
@@ -206,97 +230,38 @@ export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast,
                   </div>
                 </div>
 
-                {/* Right Card / Sidebar */}
+                {/* Right Card / Sidebar — Manage Listing */}
                 <div className="details-sidebar-col">
-                  
-                  {/* Compatibility Card */}
-                  <div className="compatibility-card">
-                    <h2 className="compatibility-title">AI Match and Compatibility</h2>
-                    
-                    <div className="comp-header-row">
-                      <div className="comp-gauge">
-                        <svg className="comp-gauge-svg" viewBox="0 0 36 36">
-                          <path className="comp-gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                          <path 
-                            className="comp-gauge-bar" 
-                            strokeDasharray={`${activeListing.matchScore.replace('%', '')}, 100`} 
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                          />
-                        </svg>
-                        <span className="comp-gauge-text">{activeListing.matchScore}</span>
-                      </div>
-                      
-                      <div className="comp-partner-info">
-                        <span className="comp-partner-name">{activeListing.matchPartner}</span>
-                        <span className="comp-partner-sub">Hypothetical Compatibility</span>
-                      </div>
-                    </div>
-
-                    <div className="comp-match-matches">Matches finalized.</div>
-                    
-                    <div className="comp-why-label">Why it matches:</div>
-                    <p className="comp-why-text">
-                      {activeListing.matchWhy}
+                  <div className="manage-listing-card">
+                    <h2 className="manage-listing-title">Manage Listing</h2>
+                    <p className="manage-listing-sub">
+                      Update your listing details, or share it with a contact and across your channels.
                     </p>
 
-                    <div className="comp-btn-group">
-                      <button className="btn-request-source" onClick={() => triggerToast(`Sourcing request sent to ${activeListing.matchPartner}!`)}>
-                        Request to Source
+                    <div className="manage-listing-btns">
+                      <button className="btn-edit-details" onClick={() => startEdit(activeListing)}>
+                        <Pencil size={16} /> Edit Details
                       </button>
-                      <button className="btn-message-seller" onClick={() => setCurrentPage('messages')}>
-                        Message Seller
+                      <button className="btn-share-listing" onClick={() => setShareOpen(true)}>
+                        <Share2 size={16} /> Share
                       </button>
                     </div>
-                  </div>
 
-                  {/* Map Card */}
-                  <div className="map-card">
-                    <div className="map-container">
-                      <svg className="map-svg-grid" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="200" height="200" fill="#E8ECEF" />
-                        <line x1="10" y1="0" x2="10" y2="200" stroke="#FFFFFF" strokeWidth="6" />
-                        <line x1="50" y1="0" x2="50" y2="200" stroke="#FFFFFF" strokeWidth="8" />
-                        <line x1="90" y1="0" x2="90" y2="200" stroke="#FFFFFF" strokeWidth="6" />
-                        <line x1="140" y1="0" x2="140" y2="200" stroke="#FFFFFF" strokeWidth="8" />
-                        <line x1="180" y1="0" x2="180" y2="200" stroke="#FFFFFF" strokeWidth="4" />
-                        
-                        <line x1="0" y1="30" x2="200" y2="30" stroke="#FFFFFF" strokeWidth="6" />
-                        <line x1="0" y1="80" x2="200" y2="80" stroke="#FFFFFF" strokeWidth="8" />
-                        <line x1="0" y1="120" x2="200" y2="120" stroke="#FFFFFF" strokeWidth="6" />
-                        <line x1="0" y1="160" x2="200" y2="160" stroke="#FFFFFF" strokeWidth="8" />
-                        
-                        <path d="M 0 100 C 60 100, 100 120, 200 60" fill="none" stroke="#FFFFFF" strokeWidth="8" />
-
-                        {/* Dynamic Path */}
-                        <path 
-                          d={`M ${activeListing.latLngStart.x} ${activeListing.latLngStart.y} C 100 70, 110 110, ${activeListing.latLngEnd.x} ${activeListing.latLngEnd.y}`} 
-                          fill="none" 
-                          stroke="#059669" 
-                          strokeWidth="3" 
-                          strokeDasharray="3 3" 
-                        />
-                        <path 
-                          d={`M ${activeListing.latLngStart.x} ${activeListing.latLngStart.y} C 100 70, 110 110, ${activeListing.latLngEnd.x} ${activeListing.latLngEnd.y}`} 
-                          fill="none" 
-                          stroke="#059669" 
-                          strokeWidth="1.5" 
-                        />
-
-                        {/* Start Node */}
-                        <g transform={`translate(${activeListing.latLngStart.x}, ${activeListing.latLngStart.y})`}>
-                          <circle cx="0" cy="0" r="12" fill="#059669" fillOpacity="0.2" />
-                          <circle cx="0" cy="0" r="5" fill="#059669" stroke="#FFFFFF" strokeWidth="1.5" />
-                        </g>
-
-                        {/* End Node */}
-                        <g transform={`translate(${activeListing.latLngEnd.x}, ${activeListing.latLngEnd.y})`}>
-                          <circle cx="0" cy="0" r="12" fill="#7C3AED" fillOpacity="0.2" />
-                          <circle cx="0" cy="0" r="5" fill="#7C3AED" stroke="#FFFFFF" strokeWidth="1.5" />
-                        </g>
-                      </svg>
+                    <div className="manage-listing-meta">
+                      <div className="manage-meta-row">
+                        <span>Status</span>
+                        <span className="listing-status-badge status-active">Active</span>
+                      </div>
+                      <div className="manage-meta-row">
+                        <span>Quantity</span>
+                        <strong>{activeListing.qty}</strong>
+                      </div>
+                      <div className="manage-meta-row">
+                        <span>Source</span>
+                        <strong>{activeListing.source}</strong>
+                      </div>
                     </div>
                   </div>
-
                 </div>
 
               </div>
@@ -304,8 +269,57 @@ export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast,
           )}
 
         </div>
-        <Footer variant="compact" triggerToast={triggerToast} />
+        <Footer variant="compact" triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
       </main>
+
+      {/* Share Listing Modal */}
+      {shareOpen && activeListing && (
+        <div className="share-overlay" onClick={() => setShareOpen(false)}>
+          <div className="share-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="share-modal-header">
+              <div>
+                <h3 className="share-modal-title">Share Listing</h3>
+                <p className="share-modal-sub">{activeListing.shortTitle}</p>
+              </div>
+              <button className="share-close-btn" aria-label="Close" onClick={() => setShareOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="share-section-label">Send to a contact</div>
+            <div className="share-contacts">
+              {SHARE_CONTACTS.map((c) => (
+                <button key={c.id} className="share-contact" onClick={() => shareToContact(c)}>
+                  <img src={avatarImg} alt={c.name} className="share-contact-avatar" />
+                  <span className="share-contact-name">{c.name}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="share-section-label">Share via</div>
+            <div className="share-socials">
+              <button className="share-social whatsapp" onClick={() => shareVia('WhatsApp')}>
+                <MessageCircle size={18} /> WhatsApp
+              </button>
+              <button className="share-social x" onClick={() => shareVia('X')}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z"/></svg>
+                X
+              </button>
+              <button className="share-social instagram" onClick={() => shareVia('Instagram')}>
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                Instagram
+              </button>
+              <button className="share-social linkedin" onClick={() => shareVia('LinkedIn')}>
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                LinkedIn
+              </button>
+              <button className="share-social copy" onClick={() => shareVia('Copy link')}>
+                <Copy size={17} /> Copy link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
