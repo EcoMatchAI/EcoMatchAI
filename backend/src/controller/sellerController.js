@@ -10,7 +10,7 @@ class SellerController{
                 res.status(404).json({
                     message:"No auth token found"
                 })
-            }
+            } 
             const seller =  await sellerService.getSellerProfile(jwt)
             res.status(200).json(seller);
         }
