@@ -20,6 +20,9 @@ const sellerSchema =  mongoose.Schema({
         type: String,
         required: true
     },
+    isEmailVerified: { 
+        type: Boolean, default: false },
+
     bankDetails:{
         accountHolderName:{
             type:String,
