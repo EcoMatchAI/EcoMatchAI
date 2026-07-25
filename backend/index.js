@@ -4,10 +4,10 @@ const connectDb = require('./src/config/db');
 const app = express();
 app.use(express.json());
 
-const sellerRoutes = require('./src/routes/sellerRoutes')
-app.use('/api/seller',sellerRoutes)
+const userRoutes = require('./src/routes/userRoutes')
+app.use('/api/user',userRoutes)
 
 app.listen(5000, async () => {
     console.log("Backend started on port 5000");
     await connectDb();
-});
+});
