@@ -12,53 +12,31 @@ const sellerSchema =  mongoose.Schema({
         required: true,
         unique: true
     },
-    phoneNumber: {
-        type: String,
-        required: true
-    },
+    
     password: {
         type: String,
         required: true
     },
     isEmailVerified: { 
         type: Boolean, default: false },
-
-    bankDetails:{
-        accountHolderName:{
-            type:String,
-            required:true
-        },
-        accountNumber:{
-            type:String,
-        required:true
-        },
-        bankName:{
-            type:String,
-            required:true
-        },
-        ifscCode:{
-            type:String,
-            required:true
-        },
+phoneNumber: { type: String, default: null },
+    GSTIN: { type: String, default: null },
+    IMPORT_EXPORT_Code: { type: String, default: null },
+    preferredPortAndAirport: { type: String, default: null },
+    FieldOfInterest: { type: String, default: null },
+    
+    bankDetails: {
+        accountHolderName: { type: String, default: null },
+        accountNumber: { type: String, default: null },
+        bankName: { type: String, default: null },
+        ifscCode: { type: String, default: null } 
     },
-address:[{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:"Address"
+    address: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Address"
+    }],
+    
 
-}],
-GSTIN:{
-    type:String,
-    required:true
-},
-IMPORT_EXPORT_Code:{
-    type:String,
-},
-preferredPortAndAirport:{
-    type:String,
-}, 
-FieldOfInterest:{
-    type:String,
-},
 role:{
     type:String,
     default:UserRoles.SELLER
