@@ -9,7 +9,6 @@ router.post('/signup/complete-profile', UserController.completeProfile);
 router.get('/profile', UserController.getUserProfile);
 router.get('/', UserController.getAllUsers);
 router.patch('/', UserController.updateUser);
-router.patch('/:id/status/:status', UserController.updateAccountStatus);
 router.delete('/', UserController.deleteUser);
 
 module.exports = router;
