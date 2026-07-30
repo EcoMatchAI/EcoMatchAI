@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, XCircle, Loader2, MailCheck, Recycle } from 'lucide-react';
-import { apiVerifyEmail, apiResendVerification, setToken } from '../../lib/api';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, ShieldCheck, Loader2, MailCheck, Recycle, KeyRound } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const wrap = {
   minHeight: '100vh', display: 'grid', placeItems: 'center',
   background: '#f1f5f9', padding: '24px', fontFamily: 'Segoe UI, Roboto, sans-serif',
 };
 const card = {
-  width: '100%', maxWidth: '440px', background: '#fff', borderRadius: '18px',
+  width: '100%', maxWidth: '460px', background: '#fff', borderRadius: '18px',
   boxShadow: '0 12px 30px rgba(15,23,42,0.10)', padding: '40px 32px', textAlign: 'center',
 };
 const btn = {
@@ -18,65 +17,50 @@ const btn = {
 };
 const input = {
   width: '100%', padding: '12px 14px', border: '1px solid #cbd5e1', borderRadius: '10px',
-  fontSize: '14px', marginBottom: '12px', boxSizing: 'border-box',
+  fontSize: '15px', marginBottom: '16px', boxSizing: 'border-box', textAlign: 'center',
+  letterSpacing: '3px', fontWeight: 'bold'
 };
 
 export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
-  const [params] = useSearchParams();
-  const token = params.get('token');
-
-  const [status, setStatus] = useState('verifying'); // verifying | success | error
+  const { verifyOtp, getPendingEmail, user } = useAuth();
+  const [email, setEmail] = useState(getPendingEmail() || user?.email || '');
+  const [otp, setOtp] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | verifying | success
   const [message, setMessage] = useState('');
-  const [user, setUser] = useState(null);
-  const [resendEmail, setResendEmail] = useState('');
-  const [resending, setResending] = useState(false);
-  const ran = useRef(false); // guard React 18 StrictMode double-invoke
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (ran.current) return;
-    ran.current = true;
-
-    if (!token) {
-      setStatus('error');
-      setMessage('No verification token was provided in the link.');
-      return;
+    if (!email) {
+      const stored = getPendingEmail() || user?.email;
+      if (stored) setEmail(stored);
     }
+  }, [user]);
 
-    apiVerifyEmail(token)
-      .then((data) => {
-        if (data.token) setToken(data.token); // auto-login
-        setUser(data.user || null);
-        setMessage(data.message || 'Email verified successfully!');
-        setStatus('success');
-        // Send the user on to the material-preferences step automatically.
-        const next = data.user && data.user.profileCompleted ? 'dashboard' : 'preferences';
-        setTimeout(() => setCurrentPage(next), 1800);
-      })
-      .catch((err) => {
-        setMessage(err.message || 'Verification failed.');
-        setStatus('error');
-      });
-  }, [token]);
-
-  const goNext = () => {
-    if (user && !user.profileCompleted) setCurrentPage('preferences');
-    else setCurrentPage('dashboard');
-  };
-
-  const handleResend = async (e) => {
+  const handleVerifySubmit = async (e) => {
     e.preventDefault();
-    if (!resendEmail.trim()) {
+    if (!email.trim()) {
       triggerToast('Please enter your email address.', 'error');
       return;
     }
-    setResending(true);
+    if (!otp.trim() || otp.trim().length !== 6) {
+      triggerToast('Please enter the 6-digit OTP code sent to your email.', 'error');
+      return;
+    }
+
+    setStatus('verifying');
+    setErrorMsg('');
     try {
-      const data = await apiResendVerification(resendEmail.trim());
-      triggerToast(data.message || 'Verification email sent.');
+      const data = await verifyOtp(email.trim(), otp.trim());
+      setMessage(data.message || 'Email verified successfully!');
+      setStatus('success');
+      triggerToast('Email verified! Redirecting to profile setup...');
+      setTimeout(() => {
+        setCurrentPage('preferences');
+      }, 1500);
     } catch (err) {
-      triggerToast(err.message || 'Could not resend email.', 'error');
-    } finally {
-      setResending(false);
+      setStatus('idle');
+      setErrorMsg(err.message || 'Verification failed. Please check your OTP.');
+      triggerToast(err.message || 'Verification failed.', 'error');
     }
   };
 
@@ -84,54 +68,88 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
     <div style={wrap}>
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-          <Recycle size={26} color="#15803d" />
-          <span style={{ fontSize: '20px', fontWeight: 800, color: '#15803d' }}>EcoMatch</span>
+          <Recycle size={28} color="#15803d" />
+          <span style={{ fontSize: '22px', fontWeight: 800, color: '#15803d' }}>EcoMatch</span>
         </div>
 
-        {status === 'verifying' && (
+        {status === 'success' ? (
           <>
-            <Loader2 size={48} color="#15803d" style={{ animation: 'spin 1s linear infinite' }} />
-            <h1 style={{ fontSize: '20px', color: '#0f172a', margin: '16px 0 8px' }}>Verifying your email…</h1>
-            <p style={{ color: '#64748b', fontSize: '14px' }}>Hang tight, this only takes a moment.</p>
-          </>
-        )}
-
-        {status === 'success' && (
-          <>
-            <CheckCircle2 size={52} color="#15803d" />
-            <h1 style={{ fontSize: '21px', color: '#0f172a', margin: '16px 0 8px' }}>Email verified!</h1>
+            <CheckCircle2 size={56} color="#15803d" style={{ margin: '0 auto 16px' }} />
+            <h1 style={{ fontSize: '22px', color: '#0f172a', margin: '0 0 8px' }}>Email Verified!</h1>
             <p style={{ color: '#475569', fontSize: '14px', marginBottom: '24px' }}>{message}</p>
-            <button style={btn} onClick={goNext}>
-              <MailCheck size={18} /> Continue
+            <button style={btn} onClick={() => setCurrentPage('preferences')}>
+              <MailCheck size={18} /> Continue to Profile Setup
             </button>
           </>
-        )}
-
-        {status === 'error' && (
+        ) : (
           <>
-            <XCircle size={52} color="#ef4444" />
-            <h1 style={{ fontSize: '21px', color: '#0f172a', margin: '16px 0 8px' }}>Verification failed</h1>
-            <p style={{ color: '#475569', fontSize: '14px', marginBottom: '24px' }}>{message}</p>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7',
+              display: 'grid', placeItems: 'center', margin: '0 auto 16px'
+            }}>
+              <ShieldCheck size={32} color="#15803d" />
+            </div>
+            <h1 style={{ fontSize: '22px', color: '#0f172a', margin: '0 0 8px' }}>Enter Verification Code</h1>
+            <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
+              We sent a 6-digit OTP code to <strong>{email || 'your email'}</strong>. Enter it below to activate your account.
+            </p>
 
-            <form onSubmit={handleResend} style={{ textAlign: 'left' }}>
-              <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                Resend verification link
-              </label>
-              <input
-                style={input}
-                type="email"
-                placeholder="Enter your account email"
-                value={resendEmail}
-                onChange={(e) => setResendEmail(e.target.value)}
-              />
-              <button style={{ ...btn, opacity: resending ? 0.7 : 1 }} type="submit" disabled={resending}>
-                {resending ? 'Sending…' : 'Resend email'}
+            <form onSubmit={handleVerifySubmit} style={{ textAlign: 'left' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  Email Address
+                </label>
+                <input
+                  style={{ ...input, textAlign: 'left', letterSpacing: 'normal', fontWeight: 'normal' }}
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  6-Digit OTP Code
+                </label>
+                <input
+                  style={input}
+                  type="text"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  required
+                />
+              </div>
+
+              {errorMsg && (
+                <div style={{
+                  backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b',
+                  padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px'
+                }}>
+                  ⚠️ {errorMsg}
+                </div>
+              )}
+
+              <button style={{ ...btn, opacity: status === 'verifying' ? 0.7 : 1 }} type="submit" disabled={status === 'verifying'}>
+                {status === 'verifying' ? (
+                  <>
+                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    Verifying OTP…
+                  </>
+                ) : (
+                  <>
+                    <KeyRound size={18} /> Verify & Continue
+                  </>
+                )}
               </button>
             </form>
 
             <button
               onClick={() => setCurrentPage('signin')}
-              style={{ background: 'none', border: 'none', color: '#15803d', fontWeight: 600, marginTop: '16px', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#15803d', fontWeight: 600, marginTop: '20px', cursor: 'pointer', fontSize: '14px' }}
             >
               Back to Sign In
             </button>

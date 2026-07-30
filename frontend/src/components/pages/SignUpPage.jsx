@@ -4,9 +4,10 @@ import {
   BackgroundWaves, SignInLogo, DotGrid, FactoryIllustration, GoogleIcon,
   LinkedInIcon, WindTurbineIllustration
 } from '../common/Icons';
-import { apiSignup, setToken } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
+  const { signup } = useAuth();
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -45,17 +46,15 @@ export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
 
     setSignUpLoading(true);
     try {
-      const data = await apiSignup({
-        name: signupName.trim(),
+      const data = await signup({
+        businessName: signupName.trim(),
         email: signupEmail.trim(),
         password: signupPassword,
         confirmPassword: signupConfirmPassword,
       });
-      setToken(data.token);
-      triggerToast(data.message || 'Account created! Please verify your email.');
+      triggerToast(data.message || 'Account created! Check your email for the 6-digit OTP code.');
       setTimeout(() => {
-        // Email must be verified before anything else — go to the gate page.
-        setCurrentPage('checkEmail');
+        setCurrentPage('verifyEmail');
       }, 1200);
     } catch (err) {
       triggerToast(err.message || 'Sign up failed. Please try again.', 'error');

@@ -4,8 +4,10 @@ import {
   LifeBuoy, MessageSquarePlus, LogOut
 } from 'lucide-react';
 import avatarImg from '../../assets/avatar.png';
+import { useAuth } from '../../context/AuthContext';
 
 export const Topnav = ({ triggerToast, setCurrentPage }) => {
+  const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const closeMenu = () => setProfileOpen(false);
@@ -15,11 +17,12 @@ export const Topnav = ({ triggerToast, setCurrentPage }) => {
     triggerToast(label);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     closeMenu();
     triggerToast('Signing out...');
+    await logout();
     if (setCurrentPage) {
-      setTimeout(() => setCurrentPage('signin'), 800);
+      setCurrentPage('signin');
     }
   };
 
@@ -81,8 +84,8 @@ export const Topnav = ({ triggerToast, setCurrentPage }) => {
                 <div className="profile-dropdown-header">
                   <img src={avatarImg} alt="User headshot" className="profile-dropdown-avatar" />
                   <div>
-                    <div className="profile-dropdown-name">GreenBrew Co.</div>
-                    <div className="profile-dropdown-email">Business Account</div>
+                    <div className="profile-dropdown-name">{user?.businessName || 'Business Account'}</div>
+                    <div className="profile-dropdown-email">{user?.email || 'Authenticated User'}</div>
                   </div>
                 </div>
 

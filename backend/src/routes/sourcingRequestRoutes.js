@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const sourcingController = require('../controller/sourcingController');
+const sourcingController = require('../controller/sourcingRequestController');
 const authenticate = require('../middlewear/authMiddlewear');
 
 router.get('/', sourcingController.getAllRequests);
