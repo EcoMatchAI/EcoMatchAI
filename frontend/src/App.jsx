@@ -24,6 +24,23 @@ import FeedbackPage from './components/pages/FeedbackPage';
 import VerifyEmailPage from './components/pages/VerifyEmailPage';
 import VerifyEmailChangePage from './components/pages/VerifyEmailChangePage';
 import CheckEmailPage from './components/pages/CheckEmailPage';
+import { useAuth } from './context/AuthContext';
+
+const ProtectedRoute = ({ children, triggerToast }) => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc', color: '#15803d', fontWeight: 700 }}>
+        Loading session...
+      </div>
+    );
+  }
+  if (!isAuthenticated) {
+    triggerToast('Please sign in to access this page.', 'error');
+    return <Navigate to="/signin" replace />;
+  }
+  return children;
+};
 
 /* ============================================================================
    ROUTING
@@ -183,16 +200,19 @@ export default function App() {
         <Route path="/signup" element={<SignUpPage {...nav} />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage {...nav} />} />
         <Route path="/check-email" element={<CheckEmailPage {...nav} />} />
-        <Route path="/preferences" element={<PreferencesPage {...nav} />} />
         <Route path="/verify-email" element={<VerifyEmailPage {...nav} />} />
         <Route path="/verify-email-change" element={<VerifyEmailChangePage {...nav} />} />
-        <Route path="/dashboard" element={<DashboardPage {...nav} />} />
-        <Route path="/marketplace" element={<MarketplacePage {...nav} />} />
-        <Route path="/listing-details" element={<ListingsDetailsPage {...nav} />} />
-        <Route path="/create-listing" element={<CreateListingPage {...nav} />} />
-        <Route path="/profile" element={<ProfilePage {...nav} />} />
-        <Route path="/notifications" element={<NotificationsPage {...nav} />} />
-        <Route path="/messages" element={<MessagesPage {...nav} />} />
+
+        {/* Protected Routes */}
+        <Route path="/preferences" element={<ProtectedRoute triggerToast={triggerToast}><PreferencesPage {...nav} /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute triggerToast={triggerToast}><DashboardPage {...nav} /></ProtectedRoute>} />
+        <Route path="/marketplace" element={<ProtectedRoute triggerToast={triggerToast}><MarketplacePage {...nav} /></ProtectedRoute>} />
+        <Route path="/listing-details" element={<ProtectedRoute triggerToast={triggerToast}><ListingsDetailsPage {...nav} /></ProtectedRoute>} />
+        <Route path="/create-listing" element={<ProtectedRoute triggerToast={triggerToast}><CreateListingPage {...nav} /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute triggerToast={triggerToast}><ProfilePage {...nav} /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute triggerToast={triggerToast}><NotificationsPage {...nav} /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute triggerToast={triggerToast}><MessagesPage {...nav} /></ProtectedRoute>} />
+
         <Route path="/about" element={<AboutUs {...nav} />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy {...nav} />} />
         <Route path="/terms-conditions" element={<TermsConditions {...nav} />} />

@@ -142,6 +142,19 @@ class SourcingService {
         await SourcingRequest.findByIdAndDelete(requestId);
         return { message: 'Sourcing request deleted successfully.' };
     }
+
+    async updateRequestStatus(requestId, buyerId, status) {
+        const request = await SourcingRequest.findById(requestId);
+        if (!request) {
+            throw new Error('Sourcing request not found.');
+        }
+        if (request.buyer.toString() !== buyerId.toString()) {
+            throw new Error('Unauthorized. You can only update status of your own sourcing requests.');
+        }
+        request.status = status;
+        await request.save();
+        return request;
+    }
 }
 
 module.exports = new SourcingService();

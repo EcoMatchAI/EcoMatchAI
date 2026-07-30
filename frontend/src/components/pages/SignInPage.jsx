@@ -4,9 +4,10 @@ import {
   BackgroundWaves, SignInLogo, DotGrid, FactoryIllustration, GoogleIcon,
   LinkedInIcon, WindTurbineIllustration
 } from '../common/Icons';
-import { apiLogin, setToken } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 export const SignInPage = ({ setCurrentPage, triggerToast }) => {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -26,24 +27,25 @@ export const SignInPage = ({ setCurrentPage, triggerToast }) => {
 
     setSignInLoading(true);
     try {
-      const data = await apiLogin({ email: email.trim(), password });
-      setToken(data.token);
+      const data = await login(email.trim(), password);
       const verified = data.user?.isEmailVerified;
-      const done = data.user?.profileCompleted;
+      const status = data.user?.accountStatus;
+      const isPendingProfile = status === 'PENDING_VERIFICATION' || !data.user?.role;
+      
       triggerToast(
         !verified
           ? 'Please verify your email to continue.'
-          : done
-          ? 'Welcome back! Redirecting to your dashboard...'
-          : 'Welcome back! Let’s finish setting up your profile...'
+          : isPendingProfile
+          ? 'Welcome back! Let’s finish setting up your profile...'
+          : 'Welcome back! Redirecting to your dashboard...'
       );
       setTimeout(() => {
-        // Email not verified -> gate page; else onboarded -> dashboard, otherwise profile.
-        if (!verified) setCurrentPage('checkEmail');
-        else setCurrentPage(done ? 'dashboard' : 'preferences');
+        if (!verified) setCurrentPage('verifyEmail');
+        else if (isPendingProfile) setCurrentPage('preferences');
+        else setCurrentPage('dashboard');
       }, 1200);
     } catch (err) {
-      triggerToast(err.message || 'Sign in failed. Please try again.', 'error');
+      triggerToast(err.message || 'Sign in failed. Please check your credentials.', 'error');
     } finally {
       setSignInLoading(false);
     }

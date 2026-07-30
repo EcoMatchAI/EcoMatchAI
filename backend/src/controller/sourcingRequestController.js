@@ -1,4 +1,4 @@
-const sourcingService = require('../services/sourcingService');
+const sourcingService = require('../services/sourcingRequestServices');
 
 class SourcingController {
 
@@ -87,6 +87,22 @@ class SourcingController {
             res.status(200).json({
                 success: true,
                 message: result.message
+            });
+        } catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    async updateStatus(req, res) {
+        try {
+            const updatedRequest = await sourcingService.updateRequestStatus(req.params.id, req.user._id, req.body.status);
+            res.status(200).json({
+                success: true,
+                message: 'Sourcing request status updated successfully.',
+                request: updatedRequest
             });
         } catch (error) {
             res.status(400).json({

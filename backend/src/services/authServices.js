@@ -57,6 +57,29 @@ class AuthServices {
         };
     }
 
+    async getMe(token) {
+        if (!token) {
+            throw new Error("Authorization token is required.");
+        }
+
+        const decoded = jwtProvider.verifyjwt(token);
+        let user;
+        if (decoded.userId || decoded.id) {
+            user = await User.findById(decoded.userId || decoded.id).select("-password -passwordResetToken -passwordResetExpires");
+        } else if (decoded.email) {
+            user = await User.findOne({ email: decoded.email }).select("-password -passwordResetToken -passwordResetExpires");
+        }
+
+        if (!user) {
+            throw new Error("User not found.");
+        }
+
+        return {
+            success: true,
+            user
+        };
+    }
+
     async forgotPassword(email) {
         if (!email) {
             throw new Error("Email address is required.");

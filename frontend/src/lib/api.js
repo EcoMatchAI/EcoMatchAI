@@ -6,11 +6,18 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TOKEN_KEY = 'ecomatch_token';
+const PENDING_EMAIL_KEY = 'ecomatch_pending_email';
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+export const clearToken = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(PENDING_EMAIL_KEY);
+};
 export const isLoggedIn = () => !!getToken();
+
+export const getPendingEmail = () => localStorage.getItem(PENDING_EMAIL_KEY);
+export const setPendingEmail = (email) => localStorage.setItem(PENDING_EMAIL_KEY, email);
 
 /**
  * Core fetch wrapper. Attaches the JWT, parses JSON, and throws an Error
@@ -53,35 +60,40 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
   return data;
 }
 
-/* ---- Auth ---- */
+/* ---- Registration & Auth ---- */
 export const apiSignup = (payload) =>
-  request('/auth/signup', { method: 'POST', body: payload, auth: false });
+  request('/user/signup/', { method: 'POST', body: payload, auth: false });
+
+export const apiVerifyEmailOtp = (payload) =>
+  request('/user/signup/verify-otp', { method: 'POST', body: payload, auth: false });
+
+export const apiCompleteProfile = (payload) =>
+  request('/user/signup/complete-profile', { method: 'POST', body: payload, auth: true });
 
 export const apiLogin = (payload) =>
   request('/auth/login', { method: 'POST', body: payload, auth: false });
 
-export const apiGetMe = () => request('/auth/me');
+export const apiGetMe = () => request('/auth/me', { auth: true });
 
-/* ---- Email verification ---- */
-export const apiVerifyEmail = (token) =>
-  request(`/auth/verify-email?token=${encodeURIComponent(token)}`, { auth: false });
+export const apiLogout = () => request('/auth/logout', { method: 'POST', auth: true });
 
-export const apiResendVerification = (email) =>
-  request('/auth/resend-verification', { method: 'POST', body: { email }, auth: false });
+/* ---- Password Reset ---- */
+export const apiForgotPassword = (email) =>
+  request('/auth/forgot-password', { method: 'POST', body: { email }, auth: false });
 
-export const apiRequestEmailChange = (newEmail) =>
-  request('/auth/request-email-change', { method: 'POST', body: { newEmail } });
+export const apiResetPassword = (payload) =>
+  request('/auth/reset-password', { method: 'POST', body: payload, auth: false });
 
-export const apiVerifyEmailChange = (token) =>
-  request(`/auth/verify-email-change?token=${encodeURIComponent(token)}`, { auth: false });
-
-/* ---- Profile ---- */
-export const apiGetProfile = () => request('/profile');
-
-export const apiCompleteProfile = (payload) =>
-  request('/profile/complete', { method: 'POST', body: payload });
+/* ---- Profile Management ---- */
+export const apiGetProfile = () => request('/user/profile', { auth: true });
 
 export const apiUpdateProfile = (payload) =>
-  request('/profile', { method: 'PATCH', body: payload });
+  request('/user/', { method: 'PATCH', body: payload, auth: true });
+
+export const apiRequestEmailChange = (newEmail) =>
+  request('/user/request-email-change', { method: 'POST', body: { newEmail }, auth: true });
+
+export const apiVerifyEmailChange = (token) =>
+  request(`/user/verify-email-change?token=${encodeURIComponent(token)}`, { auth: false });
 
 export const logout = () => clearToken();

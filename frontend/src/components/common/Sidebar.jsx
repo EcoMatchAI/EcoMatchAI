@@ -5,8 +5,10 @@ import {
 } from 'lucide-react';
 import { SignInLogo } from './Icons';
 import avatarImg from '../../assets/avatar.png';
+import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
+  const { user } = useAuth();
   const [isScrolling, setIsScrolling] = useState(false);
   const navRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
@@ -170,8 +172,8 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
             <img src={avatarImg} alt="User Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div className="inbox-profile-info">
-            <span className="inbox-profile-name">GreenBrew Co.</span>
-            <span className="inbox-profile-role">Business Account</span>
+            <span className="inbox-profile-name">{user?.businessName || 'Business Account'}</span>
+            <span className="inbox-profile-role">{user?.role || 'Member'}</span>
           </div>
         </div>
         <ChevronDown size={14} style={{ color: '#86B3A9' }} />

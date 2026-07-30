@@ -9,44 +9,29 @@ import {
 } from '../common/Icons';
 import Footer from '../common/Footer';
 import avatarImg from '../../assets/avatar.png';
-import { apiGetMe, apiCompleteProfile, isLoggedIn } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
+  const { user, completeProfile, isLoggedIn } = useAuth();
   const [activeStep, setActiveStep] = useState('business'); // 'business' | 'materials'
   const [saving, setSaving] = useState(false);
 
-  // A user may complete their profile only once. If they're already done,
-  // bounce them to the dashboard instead of letting them re-onboard.
   useEffect(() => {
-    if (!isLoggedIn()) {
+    if (!isLoggedIn) {
       triggerToast('Please sign in first.', 'error');
       setCurrentPage('signin');
       return;
     }
-    let cancelled = false;
-    apiGetMe()
-      .then(({ user }) => {
-        if (cancelled) return;
-        // Email must be verified before completing the profile.
-        if (!user?.isEmailVerified) {
-          triggerToast('Please verify your email first.', 'error');
-          setCurrentPage('checkEmail');
-          return;
-        }
-        if (user?.profileCompleted) {
-          triggerToast('Your profile is already complete.');
-          setCurrentPage('dashboard');
-        }
-      })
-      .catch((err) => {
-        if (!cancelled && err.status === 401) {
-          triggerToast('Session expired. Please sign in again.', 'error');
-          setCurrentPage('signin');
-        }
-      });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (user && !user.isEmailVerified) {
+      triggerToast('Please verify your email first.', 'error');
+      setCurrentPage('verifyEmail');
+      return;
+    }
+    if (user && user.accountStatus === 'ACTIVE' && user.role) {
+      triggerToast('Your profile is already complete.');
+      setCurrentPage('dashboard');
+    }
+  }, [user, isLoggedIn]);
 
   const [selectedBusinessTypes, setSelectedBusinessTypes] = useState({
     generator: true,
@@ -155,10 +140,13 @@ export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
       return;
     }
 
-    // Strip non-serializable React icon elements before sending to the API.
     const materialsPayload = materials.map(({ id, name, selection }) => ({ id, name, selection }));
+    const role = isGenerator ? 'SELLER' : 'BUYER';
 
     const payload = {
+      role,
+      GSTIN: businessDetails.gstNumber || null,
+      FieldOfInterest: businessDetails.industry || null,
       businessTypes: { generator: isGenerator, upcycler: isUpcycler },
       businessDetails,
       generatorInfo,
@@ -168,25 +156,16 @@ export const PreferencesPage = ({ setCurrentPage, triggerToast }) => {
 
     setSaving(true);
     try {
-      const data = await apiCompleteProfile(payload);
+      const data = await completeProfile(payload);
       const activeMaterials = materialsPayload.filter(m => m.selection !== 'none');
       triggerToast(
-        data.message || `Profile saved as ${roleLabel}! ${activeMaterials.length} material interests selected.`
+        data?.message || `Profile saved as ${roleLabel}! ${activeMaterials.length} material interests selected.`
       );
       setTimeout(() => {
         setCurrentPage('dashboard');
       }, 1200);
     } catch (err) {
-      if (err.status === 401) {
-        triggerToast('Session expired. Please sign in again.', 'error');
-        setCurrentPage('signin');
-      } else if (err.status === 409) {
-        // Already completed elsewhere — treat as done.
-        triggerToast('Your profile is already complete.');
-        setCurrentPage('dashboard');
-      } else {
-        triggerToast(err.message || 'Could not save your profile. Please try again.', 'error');
-      }
+      triggerToast(err.message || 'Could not save your profile. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
