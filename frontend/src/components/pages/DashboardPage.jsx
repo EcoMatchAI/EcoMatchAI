@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus, Package, Recycle, IndianRupee, CheckCircle2, ArrowUpRight,
   MessageSquare, MapPin, ArrowRight, Eye, Bell, Search
@@ -6,12 +6,14 @@ import {
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
+import { useAuth } from '../../context/AuthContext';
+import { apiGetMyProducts, apiGetMySourcingRequests, apiGetMyShipments } from '../../lib/api';
 
 import coffeeImg from '../../assets/coffee_grounds.png';
 import fabricImg from '../../assets/fabric_waste.png';
 import woodImg from '../../assets/wood_offcuts.png';
 
-const STAT_CARDS = [
+const STAT_CARDS_DEFAULT = [
   { key: 'listings', label: 'Active Listings', value: '6', delta: '+2 this week', icon: <Package size={20} />, tone: 'green' },
   { key: 'matches', label: 'New Matches', value: '14', delta: '+5 today', icon: <Recycle size={20} />, tone: 'purple' },
   { key: 'requests', label: 'Pending Requests', value: '3', delta: 'Awaiting reply', icon: <MessageSquare size={20} />, tone: 'amber' },
@@ -24,7 +26,7 @@ const IMPACT = [
   { label: 'Avg. Match Score', value: '91%', icon: <Recycle size={18} /> },
 ];
 
-const MY_LISTINGS = [
+const MY_LISTINGS_FALLBACK = [
   { id: 1, title: 'Spent Coffee Grounds', qty: '120 kg/day', views: 48, requests: 3, status: 'Active', img: coffeeImg },
   { id: 2, title: 'Recycled Textile Fabric', qty: '350 kg/month', views: 31, requests: 1, status: 'Active', img: fabricImg },
   { id: 3, title: 'Premium Wood Offcuts', qty: '500 kg/month', views: 22, requests: 0, status: 'Paused', img: woodImg },
@@ -37,6 +39,62 @@ const MATCHES = [
 ];
 
 export const DashboardPage = ({ currentPage, setCurrentPage, triggerToast }) => {
+  const { user } = useAuth();
+  const [myProducts, setMyProducts] = useState([]);
+  const [requestCount, setRequestCount] = useState(3);
+  const [shipmentCount, setShipmentCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    apiGetMyProducts()
+      .then((res) => {
+        if (active && res?.products && Array.isArray(res.products)) {
+          setMyProducts(res.products);
+        }
+      })
+      .catch((err) => console.warn('Dashboard product fetch:', err.message));
+
+    apiGetMySourcingRequests()
+      .then((res) => {
+        if (active && typeof res?.count === 'number') {
+          setRequestCount(res.count);
+        }
+      })
+      .catch(() => {});
+
+    apiGetMyShipments()
+      .then((res) => {
+        if (active && typeof res?.count === 'number') {
+          setShipmentCount(res.count);
+        }
+      })
+      .catch(() => {});
+
+    return () => { active = false; };
+  }, []);
+
+  const totalActiveCount = myProducts.length > 0 ? myProducts.length : 6;
+  const statCards = STAT_CARDS_DEFAULT.map((c) => {
+    if (c.key === 'listings') return { ...c, value: String(totalActiveCount) };
+    if (c.key === 'requests') return { ...c, value: String(requestCount) };
+    return c;
+  });
+
+  const displayListings = myProducts.length > 0
+    ? myProducts.map((p) => ({
+        id: p._id,
+        title: p.title,
+        qty: `${p.quantity} ${p.unit || 'kg'} / ${p.frequency || 'Weekly'}`,
+        views: 12,
+        requests: 1,
+        status: p.status || 'Active',
+        img: p.photos?.[0] || (p.category === 'Organic' ? coffeeImg : p.category === 'Textiles' ? fabricImg : woodImg),
+        raw: p,
+      }))
+    : MY_LISTINGS_FALLBACK;
+
+  const greetingName = user?.businessName || user?.email?.split('@')[0] || 'GreenBrew Co.';
+
   return (
     <div className="inbox-page-wrapper">
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} triggerToast={triggerToast} />
@@ -48,7 +106,7 @@ export const DashboardPage = ({ currentPage, setCurrentPage, triggerToast }) => 
           {/* Header */}
           <div className="dash-header">
             <div>
-              <h1 className="inbox-view-title" style={{ marginBottom: '4px' }}>Welcome back, GreenBrew Co. 👋</h1>
+              <h1 className="inbox-view-title" style={{ marginBottom: '4px' }}>Welcome back, {greetingName} 👋</h1>
               <p className="dash-subtitle">Here's what's happening with your materials today.</p>
             </div>
             <button className="dash-primary-btn" onClick={() => setCurrentPage('createListing')}>
@@ -59,7 +117,7 @@ export const DashboardPage = ({ currentPage, setCurrentPage, triggerToast }) => 
 
           {/* Stat cards */}
           <div className="dash-stats-grid">
-            {STAT_CARDS.map((s) => (
+            {statCards.map((s) => (
               <div key={s.key} className="dash-stat-card">
                 <div className={`dash-stat-icon ${s.tone}`}>{s.icon}</div>
                 <div className="dash-stat-info">
@@ -99,7 +157,7 @@ export const DashboardPage = ({ currentPage, setCurrentPage, triggerToast }) => 
               </div>
 
               <div className="dash-list">
-                {MY_LISTINGS.map((l) => (
+                {displayListings.map((l) => (
                   <div key={l.id} className="dash-listing-row">
                     <img src={l.img} alt={l.title} className="dash-listing-thumb" />
                     <div className="dash-listing-info">

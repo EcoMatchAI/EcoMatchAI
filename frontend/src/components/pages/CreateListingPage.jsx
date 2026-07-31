@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft, ImagePlus, UploadCloud, Save, Tag, Box, Clock, Calendar,
-  BadgeCheck, Droplet, IndianRupee, MapPin, Truck, Package, FileText, CircleDot
+  BadgeCheck, Droplet, IndianRupee, MapPin, Truck, Package, FileText, CircleDot, Loader2
 } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
+import { apiCreateProduct, apiUpdateProduct, apiUploadImages } from '../../lib/api';
 
 const EMPTY_FORM = {
   title: '',
@@ -29,16 +30,19 @@ const EMPTY_FORM = {
 };
 
 export const CreateListingPage = ({ currentPage, setCurrentPage, triggerToast, listingDraft }) => {
-  const isEdit = Boolean(listingDraft);
+  const isEdit = Boolean(listingDraft && listingDraft._id);
   const [form, setForm] = useState(() => ({ ...EMPTY_FORM, ...(listingDraft || {}) }));
+  const [submitting, setSubmitting] = useState(false);
+  const [imageFiles, setImageFiles] = useState([]);
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
   const handlePhotos = (e) => {
-    const count = e.target.files?.length || 0;
-    if (count) {
-      update('photoCount', count);
-      triggerToast(`${count} photo${count > 1 ? 's' : ''} attached.`);
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      setImageFiles(files);
+      update('photoCount', files.length);
+      triggerToast(`${files.length} photo${files.length > 1 ? 's' : ''} selected.`);
     }
   };
 
@@ -50,15 +54,58 @@ export const CreateListingPage = ({ currentPage, setCurrentPage, triggerToast, l
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) { triggerToast('Please enter a listing title.', 'error'); return; }
     if (!form.category) { triggerToast('Please select a material category.', 'error'); return; }
     if (!form.quantity.toString().trim()) { triggerToast('Please enter a quantity.', 'error'); return; }
     if (!form.city.trim()) { triggerToast('Please enter a location / city.', 'error'); return; }
+    if (!form.description.trim()) { form.description = form.title; }
 
-    triggerToast(isEdit ? 'Listing updated successfully!' : 'Listing published to the marketplace!');
-    setTimeout(() => setCurrentPage('listingsDetails'), 1200);
+    setSubmitting(true);
+    try {
+      let uploadedPhotos = form.photos || [];
+      if (imageFiles.length > 0) {
+        try {
+          const uploadRes = await apiUploadImages(imageFiles);
+          if (uploadRes?.data) {
+            uploadedPhotos = uploadRes.data.map(img => img.url || img.secure_url || img);
+          }
+        } catch (uploadErr) {
+          console.warn('Image upload failed, falling back to local list:', uploadErr.message);
+        }
+      }
+
+      const payload = {
+        title: form.title.trim(),
+        category: form.category,
+        description: form.description || form.title,
+        purity: form.purity || 'Standard',
+        photos: uploadedPhotos,
+        docName: form.docName ? [form.docName] : [],
+        quantity: Number(form.quantity),
+        unit: form.unit || 'kg',
+        frequency: form.frequency || 'Weekly',
+        price: Number(form.price) || 0,
+        priceUnit: form.priceUnit || 'per kg',
+        city: form.city.trim(),
+        status: form.status || 'Active',
+      };
+
+      if (isEdit) {
+        await apiUpdateProduct(listingDraft._id, payload);
+        triggerToast('Listing updated successfully in database!');
+      } else {
+        await apiCreateProduct(payload);
+        triggerToast('Listing published to the marketplace database!');
+      }
+
+      setTimeout(() => setCurrentPage('listingsDetails'), 1200);
+    } catch (err) {
+      triggerToast(err.message || 'Failed to save listing. Please check your session.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -268,9 +315,18 @@ export const CreateListingPage = ({ currentPage, setCurrentPage, triggerToast, l
               <button type="button" className="cl-cancel-btn" onClick={() => setCurrentPage('listingsDetails')}>
                 Cancel
               </button>
-              <button type="submit" className="cl-submit-btn">
-                <Save size={16} />
-                {isEdit ? 'Save Changes' : 'Publish Listing'}
+              <button type="submit" className="cl-submit-btn" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    {isEdit ? 'Saving...' : 'Publishing...'}
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    {isEdit ? 'Save Changes' : 'Publish Listing'}
+                  </>
+                )}
               </button>
             </div>
           </form>

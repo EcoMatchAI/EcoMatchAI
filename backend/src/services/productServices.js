@@ -32,7 +32,7 @@ class ProductServices {
             
 
             
-            price: max(data.price,0),
+            price: Math.max(data.price || 0, 0),
             priceUnit: data.priceUnit,
 
             city: data.city,

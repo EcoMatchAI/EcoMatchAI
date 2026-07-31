@@ -8,9 +8,14 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-    }
+    },
+    tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000
 });
-
 
 const sendPasswordResetOtpEmail = async (toEmail, otp, businessName) => {
     const htmlContent = `
@@ -24,14 +29,22 @@ const sendPasswordResetOtpEmail = async (toEmail, otp, businessName) => {
             <p style="font-size: 14px; color: #64748b;">This OTP code is valid for <strong>10 minutes</strong>. Do not share this code with anyone.</p>
             <p style="margin-top: 20px; font-size: 13px; color: #94a3b8;">If you did not request a password reset, please ignore this email.</p>
         </div>
-    `
-    return await transporter.sendMail({
-        from: process.env.EMAIL_FROM || `"EcoMatch Security" <${process.env.SMTP_USER}>`,
-        to: toEmail,
-        subject: 'EcoMatch - 6-Digit Password Reset Code',
-        html: htmlContent
-    });
+    `;
 
-}
+    try {
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_FROM || `"EcoMatch Security" <${process.env.SMTP_USER}>`,
+            to: toEmail,
+            subject: 'EcoMatch - 6-Digit Password Reset Code',
+            html: htmlContent
+        });
+        console.log(`✉️ Password reset OTP email sent to ${toEmail}`);
+        return info;
+    } catch (error) {
+        console.error(`⚠️ Password reset email sending failed (${error.message}). Development OTP for ${toEmail} is: [ ${otp} ]`);
+        return { success: false, error: error.message, otp };
+    }
+};
+
 sendPasswordResetOtpEmail.sendPasswordResetOtpEmail = sendPasswordResetOtpEmail;
 module.exports = sendPasswordResetOtpEmail;

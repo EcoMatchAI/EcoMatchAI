@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Pencil, Share2, X, Copy, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Pencil, Share2, X, Copy, MessageCircle, Trash2 } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
 import avatarImg from '../../assets/avatar.png';
+import { apiGetMyProducts, apiDeleteProduct } from '../../lib/api';
 
 import coffeeImg from '../../assets/coffee_grounds.png';
 import fabricImg from '../../assets/fabric_waste.png';
@@ -24,8 +25,6 @@ const LISTINGS_DATA = [
     matchScore: '95%',
     matchPartner: 'BioSkins Skincare Co.',
     matchWhy: 'Distance (5km), Purity (92%), Volume Match (Excellent)',
-    latLngStart: { x: 60, y: 55 },
-    latLngEnd: { x: 140, y: 120 }
   },
   {
     id: 'fabric',
@@ -40,8 +39,6 @@ const LISTINGS_DATA = [
     matchScore: '88%',
     matchPartner: 'EcoInsulate Ltd.',
     matchWhy: 'Purity (85%), Distance (12km), Regular Supply (High)',
-    latLngStart: { x: 80, y: 40 },
-    latLngEnd: { x: 120, y: 150 }
   },
   {
     id: 'wood',
@@ -56,8 +53,6 @@ const LISTINGS_DATA = [
     matchScore: '92%',
     matchPartner: 'Artisan Toys Inc.',
     matchWhy: 'Material Match (100%), Distance (8km), Consistent Volume',
-    latLngStart: { x: 110, y: 70 },
-    latLngEnd: { x: 90, y: 130 }
   },
   {
     id: 'grain',
@@ -72,8 +67,6 @@ const LISTINGS_DATA = [
     matchScore: '94%',
     matchPartner: 'GreenFeed Farms',
     matchWhy: 'Moisture requirements met, Distance (15km), Volume matched',
-    latLngStart: { x: 40, y: 90 },
-    latLngEnd: { x: 160, y: 110 }
   }
 ];
 
@@ -87,6 +80,37 @@ const SHARE_CONTACTS = [
 export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast, setListingDraft }) => {
   const [selectedListingId, setSelectedListingId] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [myDbProducts, setMyDbProducts] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    apiGetMyProducts()
+      .then((res) => {
+        if (!active) return;
+        if (res?.products && Array.isArray(res.products)) {
+          const formatted = res.products.map((p) => ({
+            id: p._id,
+            _id: p._id,
+            title: p.title,
+            shortTitle: p.title,
+            qty: `${p.quantity}${p.unit || 'kg'}/${p.frequency || 'week'}`,
+            source: p.city || 'My Location',
+            logistics: 'Local Pickup Recommended',
+            img: p.photos?.[0] || (p.category === 'Organic' ? coffeeImg : p.category === 'Textiles' ? fabricImg : woodImg),
+            gallery: p.photos?.length ? p.photos : [coffeeImg, fabricImg, woodImg, packagingImg],
+            desc: p.description,
+            rawProduct: p,
+          }));
+          setMyDbProducts(formatted);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch user listings:', err.message);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const allListings = [...myDbProducts, ...LISTINGS_DATA];
 
   const startCreate = () => {
     setListingDraft?.(null);
@@ -94,11 +118,30 @@ export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast,
   };
 
   const startEdit = (item) => {
-    setListingDraft?.({ title: item.title, city: item.source, logistics: item.logistics });
+    if (item.rawProduct) {
+      setListingDraft?.(item.rawProduct);
+    } else {
+      setListingDraft?.({ title: item.title, city: item.source, logistics: item.logistics });
+    }
     setCurrentPage('createListing');
   };
 
-  const activeListing = LISTINGS_DATA.find(item => item.id === selectedListingId);
+  const handleDelete = async (item) => {
+    if (!item._id) {
+      triggerToast('Demo item removed.');
+      return;
+    }
+    try {
+      await apiDeleteProduct(item._id);
+      setMyDbProducts((prev) => prev.filter((p) => p._id !== item._id));
+      setSelectedListingId(null);
+      triggerToast('Listing deleted successfully!');
+    } catch (err) {
+      triggerToast(err.message || 'Failed to delete listing.', 'error');
+    }
+  };
+
+  const activeListing = allListings.find(item => item.id === selectedListingId);
 
   const shareToContact = (contact) => {
     setShareOpen(false);
@@ -140,7 +183,7 @@ export const ListingsDetailsPage = ({ currentPage, setCurrentPage, triggerToast,
               </div>
 
               <div className="listings-grid">
-                {LISTINGS_DATA.map(item => (
+                {allListings.map(item => (
                   <div
                     key={item.id}
                     className="listing-item-card cursor-pointer"

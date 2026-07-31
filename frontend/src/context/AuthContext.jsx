@@ -64,8 +64,16 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
-  const handleVerifyOtp = async (email, otp) => {
-    const res = await apiVerifyEmailOtp({ email, otp });
+  const handleVerifyOtp = async (emailOrOtp, maybeOtp) => {
+    let payload;
+    if (typeof maybeOtp === 'string') {
+      payload = { email: emailOrOtp, otp: maybeOtp };
+    } else if (typeof emailOrOtp === 'string') {
+      payload = { otp: emailOrOtp };
+    } else {
+      payload = emailOrOtp;
+    }
+    const res = await apiVerifyEmailOtp(payload);
     if (res?.verificationToken) {
       setToken(res.verificationToken);
       setTokenState(res.verificationToken);

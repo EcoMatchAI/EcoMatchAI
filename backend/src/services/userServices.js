@@ -93,10 +93,15 @@ class UserServices {
         }
 
         // Role is provided by the user in the complete-profile step
+        let role = profileData.role;
+        if (role === 'SELLER') role = UserRoles.SELLER;
+        if (role === 'BUYER') role = UserRoles.BUYER;
+
         const allowedRoles = [UserRoles.BUYER, UserRoles.SELLER];
-        if (!profileData.role || !allowedRoles.includes(profileData.role)) {
+        if (!role || !allowedRoles.includes(role)) {
             throw new Error(`Invalid role. Allowed roles: ${allowedRoles.join(", ")}`);
         }
+        profileData.role = role;
 
         let addressId = null;
         if (profileData.pickupAddress) {

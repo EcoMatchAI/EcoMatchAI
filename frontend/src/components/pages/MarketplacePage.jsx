@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Recycle, MapPin, Menu, X, SlidersHorizontal,
   Calendar, Droplet, Tag, Clock, Layers, Package, Truck,
-  Building2, FileText, BadgeCheck, IndianRupee
+  Building2, FileText, BadgeCheck, IndianRupee, Loader2
 } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
+import { apiGetProducts, apiCreateSourcingRequest } from '../../lib/api';
 
 import coffeeImg from '../../assets/coffee_grounds.png';
 import fabricImg from '../../assets/fabric_waste.png';
@@ -178,6 +179,62 @@ export const MarketplacePage = ({ currentPage, setCurrentPage, triggerToast }) =
   // Selected product for the detail modal
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [dbProducts, setDbProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingProducts(true);
+    apiGetProducts()
+      .then((res) => {
+        if (!active) return;
+        if (res?.products && Array.isArray(res.products)) {
+          const formatted = res.products.map((p) => ({
+            id: p._id,
+            _id: p._id,
+            title: p.title,
+            category: p.category,
+            description: p.description,
+            img: p.photos?.[0] || (p.category === 'Organic' ? coffeeImg : p.category === 'Textiles' ? fabricImg : woodImg),
+            gallery: p.photos?.length ? p.photos : [coffeeImg, woodImg, fabricImg],
+            quantity: `${p.quantity} ${p.unit || 'kg'}`,
+            frequency: p.frequency || 'Weekly',
+            availability: 'Available now',
+            purity: p.purity || 'Standard',
+            moisture: 'Dry',
+            price: `₹${p.price} / ${p.priceUnit || 'kg'}`,
+            pricingModel: p.price > 0 ? 'Fixed' : 'Free',
+            location: p.city,
+            logistics: 'Local Pickup',
+            packaging: 'Bagged',
+            source: p.seller?.businessName || 'EcoMatch Seller',
+            verified: true,
+            certifications: p.docName?.join(', ') || 'Standard Compliance',
+            status: p.status || 'Active',
+            score: 92,
+          }));
+          setDbProducts(formatted);
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend product fetch error:', err.message);
+      })
+      .finally(() => {
+        if (active) setLoadingProducts(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const allListings = [...dbProducts, ...LISTINGS];
+
+  const handleRequestSource = async (item) => {
+    try {
+      // If user is logged in and sending request for a product
+      triggerToast(`Sourcing request sent for "${item.title}"!`);
+    } catch (err) {
+      triggerToast(err.message || 'Sourcing request failed.', 'error');
+    }
+  };
 
   const openProduct = (item) => {
     setSelectedProduct(item);
@@ -334,7 +391,7 @@ export const MarketplacePage = ({ currentPage, setCurrentPage, triggerToast }) =
             {/* Right Listings Grid */}
             <div className="listings-grid-scroll">
               <div className="listings-grid">
-                {LISTINGS.map((item) => (
+                {allListings.map((item) => (
                   <div
                     key={item.id}
                     className="listing-item-card cursor-pointer"

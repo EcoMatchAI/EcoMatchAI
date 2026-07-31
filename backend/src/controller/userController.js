@@ -30,10 +30,24 @@ class UserController {
 
     async verifyEmailOtp(req, res) {
         try {
-            const verification = await userServices.verifyEmailOtp(req.body);
-            res.status(200).json(verification)
+            let email = req.body?.email;
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                try {
+                    const decodedEmail = jwtProvider.getEmailFromjwt(token);
+                    if (decodedEmail) email = decodedEmail;
+                } catch (e) {
+                    // Fallback to req.body.email if token decoding fails
+                }
+            }
+            if (!email) {
+                return res.status(400).json({ message: "Verification token missing or invalid. Please sign up again." });
+            }
+            const verification = await userServices.verifyEmailOtp({ email, otp: req.body.otp });
+            res.status(200).json(verification);
         } catch (error) {
-            res.status(error instanceof Error ? 404 : 500).json({ message: error.message })
+            res.status(error instanceof Error ? 400 : 500).json({ message: error.message });
         }
     }
 
