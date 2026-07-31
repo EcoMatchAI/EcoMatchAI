@@ -8,14 +8,20 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-    }
+    },
+    tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 5000,
+    socketTimeout: 10000
 });
 
 const sendOtpEmail = async (toEmail, otp, businessName) => {
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <h2>EcoMatchAI Email Verification</h2>
-            <p>Hello <strong>${businessName}</strong>,</p>
+            <p>Hello <strong>${businessName || 'EcoMatch User'}</strong>,</p>
             <p>Your 6-digit verification code is:</p>
             <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #166534; padding: 15px; background: #f0fdf4; text-align: center;">
                 ${otp}
@@ -24,12 +30,19 @@ const sendOtpEmail = async (toEmail, otp, businessName) => {
         </div>
     `;
 
-    return await transporter.sendMail({
-        from: process.env.EMAIL_FROM || `"EcoMatchAI Support" <${process.env.SMTP_USER}>`,
-        to: toEmail,
-        subject: 'EcoMatchAI - 6-Digit Verification Code',
-        html: htmlContent
-    });
+    try {
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_FROM || `"EcoMatchAI Support" <${process.env.SMTP_USER}>`,
+            to: toEmail,
+            subject: 'EcoMatchAI - 6-Digit Verification Code',
+            html: htmlContent
+        });
+        console.log(`✉️ Verification OTP email sent to ${toEmail}`);
+        return info;
+    } catch (error) {
+        console.error(`⚠️ Email sending failed (${error.message}). Development OTP for ${toEmail} is: [ ${otp} ]`);
+        return { success: false, error: error.message, otp };
+    }
 };
 
 module.exports = { sendOtpEmail };

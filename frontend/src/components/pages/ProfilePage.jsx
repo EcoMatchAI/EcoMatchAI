@@ -10,7 +10,7 @@ import {
   CoffeeIcon, TextilesIcon, WoodIcon, GrainIcon, PlasticsIcon, MetalsIcon
 } from '../common/Icons';
 import avatarImg from '../../assets/avatar.png';
-import { apiGetProfile, apiUpdateProfile, apiRequestEmailChange, isLoggedIn } from '../../lib/api';
+import { apiGetProfile, apiUpdateProfile, apiRequestEmailChange, apiGetMyProducts, isLoggedIn } from '../../lib/api';
 
 // Map a material id (stored on the backend) back to its display icon.
 const MATERIAL_ICONS = {
@@ -40,7 +40,7 @@ import woodImg from '../../assets/wood_offcuts.png';
 
 // Member Since is real (from user.createdAt); the rest are app metrics with
 // no backend yet, so they stay as illustrative placeholders.
-const buildStats = (user) => {
+const buildStats = (user, activeListingsCount = 0) => {
   let memberSince = '—';
   if (user?.createdAt) {
     memberSince = new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
@@ -49,7 +49,7 @@ const buildStats = (user) => {
     { label: 'Completed Deals', value: '0', icon: <CheckCircle2 size={18} /> },
     { label: 'Avg. Response', value: '—', icon: <Clock size={18} /> },
     { label: 'Member Since', value: memberSince, icon: <CalendarDays size={18} /> },
-    { label: 'Active Listings', value: '0', icon: <Package size={18} /> },
+    { label: 'Active Listings', value: String(activeListingsCount), icon: <Package size={18} /> },
   ];
 };
 
@@ -110,6 +110,7 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(EMPTY_DETAILS);
+  const [myProducts, setMyProducts] = useState([]);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -134,6 +135,15 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
         }
       })
       .finally(() => { if (!cancelled) setLoading(false); });
+
+    apiGetMyProducts()
+      .then((res) => {
+        if (!cancelled && res?.products && Array.isArray(res.products)) {
+          setMyProducts(res.products);
+        }
+      })
+      .catch(() => {});
+
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -256,7 +266,7 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
 
           {/* ===== Stats ===== */}
           <div className="profile-stats-strip">
-            {buildStats(user).map((s) => (
+            {buildStats(user, myProducts.length).map((s) => (
               <div key={s.label} className="profile-stat">
                 <div className="profile-stat-icon">{s.icon}</div>
                 <div className="profile-stat-text">

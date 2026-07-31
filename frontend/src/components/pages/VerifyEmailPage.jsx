@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import { CheckCircle2, ShieldCheck, Loader2, MailCheck, Recycle, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -38,10 +39,6 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) {
-      triggerToast('Please enter your email address.', 'error');
-      return;
-    }
     if (!otp.trim() || otp.trim().length !== 6) {
       triggerToast('Please enter the 6-digit OTP code sent to your email.', 'error');
       return;
@@ -50,7 +47,7 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
     setStatus('verifying');
     setErrorMsg('');
     try {
-      const data = await verifyOtp(email.trim(), otp.trim());
+      const data = await verifyOtp(otp.trim());
       setMessage(data.message || 'Email verified successfully!');
       setStatus('success');
       triggerToast('Email verified! Redirecting to profile setup...');
@@ -91,24 +88,10 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
             </div>
             <h1 style={{ fontSize: '22px', color: '#0f172a', margin: '0 0 8px' }}>Enter Verification Code</h1>
             <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
-              We sent a 6-digit OTP code to <strong>{email || 'your email'}</strong>. Enter it below to activate your account.
+              We sent a 6-digit OTP code to <strong style={{ color: '#15803d' }}>{email || 'your registered email'}</strong>. Enter it below to activate your account.
             </p>
 
             <form onSubmit={handleVerifySubmit} style={{ textAlign: 'left' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  Email Address
-                </label>
-                <input
-                  style={{ ...input, textAlign: 'left', letterSpacing: 'normal', fontWeight: 'normal' }}
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>
                   6-Digit OTP Code
@@ -121,6 +104,7 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                   required
+                  autoFocus
                 />
               </div>
 
