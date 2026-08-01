@@ -38,21 +38,50 @@ class UserServices {
             await userRecord.save();
         }
 
+        await this.issueOtp(normalizedEmail, data.businessName);
+
+        const tempToken = jwtProvider.createJwt({ email: normalizedEmail, step: 'OTP_PENDING' });
+        return { email: normalizedEmail, tempToken, message: "OTP sent to email. Valid for 10 minutes." };
+    }
+
+    // Creates a fresh 10-minute OTP and emails it.
+    // If the email cannot be sent, the OTP record is removed again — otherwise the user
+    // sits on a code-entry screen waiting for a code that was never delivered.
+    async issueOtp(normalizedEmail, businessName) {
         const otp = generateOtp();
         const hashedOtp = await bcrypt.hash(otp, 8);
-        // Store OTP with 10-minute expiry (10 * 60 * 1000 ms)
+
         await OtpVerification.deleteMany({ email: normalizedEmail });
         await OtpVerification.create({
             email: normalizedEmail,
             otp: hashedOtp,
             expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-
         });
-        // Send OTP via Nodemailer
-        await sendOtpEmail(normalizedEmail, otp, data.businessName);
 
-        const tempToken = jwtProvider.createJwt({ email: normalizedEmail, step: 'OTP_PENDING' });
-        return { email: normalizedEmail, tempToken, message: "OTP sent to email. Valid for 10 minutes." };
+        try {
+            await sendOtpEmail(normalizedEmail, otp, businessName);
+        } catch (error) {
+            await OtpVerification.deleteMany({ email: normalizedEmail });
+            throw error;
+        }
+    }
+
+    async resendSignupOtp(email) {
+        if (!email) {
+            throw new Error("Email address is required.");
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        const userRecord = await User.findOne({ email: normalizedEmail });
+
+        if (!userRecord) {
+            throw new Error("No pending signup found for this email. Please sign up again.");
+        }
+        if (userRecord.isEmailVerified) {
+            throw new Error("This email address is already verified. Please sign in.");
+        }
+
+        await this.issueOtp(normalizedEmail, userRecord.businessName);
+        return { email: normalizedEmail, message: "A new OTP has been sent. Valid for 10 minutes." };
     }
 
     async verifyEmailOtp({ email, otp }) {
@@ -131,7 +160,7 @@ class UserServices {
     }
 
     async getUserByEmail(email) {
-        const user = await User.findOne({ email: email })
+        const user = await User.findOne({ email: email }).select('-password')
         if (!user) {
             throw new Error("User not found")
         }
@@ -139,7 +168,7 @@ class UserServices {
     }
 
     async getUserById(id) {
-        const user = await User.findById(id);
+        const user = await User.findById(id).select('-password');
         if (!user) {
             throw new Error("User Not Present")
         }
@@ -147,12 +176,27 @@ class UserServices {
     }
 
     async getAllUsers(status) {
-        const allUsers = await User.find({ accountStatus: status })
+        const filter = status ? { accountStatus: status } : {};
+        const allUsers = await User.find(filter).select('-password')
         return allUsers
     }
 
     async updateUser(existingUser, newUserData) {
-        const updatedUser = await User.findByIdAndUpdate(existingUser._id, newUserData, { new: true });
+        // Allow-list: a user must never be able to promote themselves by sending
+        // role / accountStatus / isEmailVerified / password in the request body.
+        const EDITABLE = [
+            'businessName', 'phoneNumber', 'GSTIN', 'IMPORT_EXPORT_Code',
+            'preferredPortAndAirport', 'FieldOfInterest', 'bankDetails'
+        ];
+        const updates = {};
+        for (const field of EDITABLE) {
+            if (newUserData[field] !== undefined) updates[field] = newUserData[field];
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(existingUser._id, updates, {
+            new: true,
+            runValidators: true
+        }).select('-password');
         return updatedUser;
     }
 

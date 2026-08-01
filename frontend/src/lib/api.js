@@ -103,6 +103,9 @@ async function requestFormData(path, formData, { auth = true } = {}) {
 export const apiSignup = (payload) =>
   request('/user/signup/', { method: 'POST', body: payload, auth: false });
 
+export const apiResendSignupOtp = (email) =>
+  request('/user/signup/resend-otp', { method: 'POST', body: email ? { email } : {}, auth: true });
+
 export const apiVerifyEmailOtp = (payload) =>
   request('/user/signup/verify-otp', { method: 'POST', body: typeof payload === 'string' ? { otp: payload } : payload, auth: true });
 
@@ -129,6 +132,9 @@ export const apiGetProfile = () => request('/user/profile', { auth: true });
 export const apiUpdateProfile = (payload) =>
   request('/user/', { method: 'PATCH', body: payload, auth: true });
 
+/* NOT IMPLEMENTED ON THE BACKEND YET — these routes do not exist, so both calls
+   return 404. Do not wire them into a page until /user/request-email-change and
+   /user/verify-email-change are added. */
 export const apiRequestEmailChange = (newEmail) =>
   request('/user/request-email-change', { method: 'POST', body: { newEmail }, auth: true });
 

@@ -1,21 +1,9 @@
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 5000,
-    socketTimeout: 10000
-});
+// Reuse the single verified transporter instead of opening a second SMTP pool.
+const { transporter } = require('./emailService');
+
+const EMAIL_FROM = process.env.EMAIL_FROM || `"EcoMatch Security" <${process.env.SMTP_USER}>`;
 
 const sendPasswordResetOtpEmail = async (toEmail, otp, businessName) => {
     const htmlContent = `
@@ -33,16 +21,16 @@ const sendPasswordResetOtpEmail = async (toEmail, otp, businessName) => {
 
     try {
         const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || `"EcoMatch Security" <${process.env.SMTP_USER}>`,
+            from: EMAIL_FROM,
             to: toEmail,
             subject: 'EcoMatch - 6-Digit Password Reset Code',
             html: htmlContent
         });
-        console.log(`✉️ Password reset OTP email sent to ${toEmail}`);
+        console.log(`✉️  Password reset OTP email sent to ${toEmail} (${info.response})`);
         return info;
     } catch (error) {
-        console.error(`⚠️ Password reset email sending failed (${error.message}). Development OTP for ${toEmail} is: [ ${otp} ]`);
-        return { success: false, error: error.message, otp };
+        console.error(`❌ Password reset email to ${toEmail} failed: ${error.message}`);
+        throw new Error('Could not send the reset email. Please try again in a moment.');
     }
 };
 

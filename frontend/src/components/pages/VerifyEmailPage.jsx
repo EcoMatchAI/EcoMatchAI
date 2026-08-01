@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { CheckCircle2, ShieldCheck, Loader2, MailCheck, Recycle, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { apiResendSignupOtp } from '../../lib/api';
 
 const wrap = {
   minHeight: '100vh', display: 'grid', placeItems: 'center',
@@ -29,6 +30,22 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
   const [status, setStatus] = useState('idle'); // idle | verifying | success
   const [message, setMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [resending, setResending] = useState(false);
+
+  const handleResend = async () => {
+    setResending(true);
+    setErrorMsg('');
+    try {
+      const res = await apiResendSignupOtp(email);
+      setOtp('');
+      triggerToast(res.message || 'A new OTP has been sent to your email.');
+    } catch (err) {
+      setErrorMsg(err.message || 'Could not resend the OTP.');
+      triggerToast(err.message || 'Could not resend the OTP.', 'error');
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     if (!email) {
@@ -131,9 +148,21 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
               </button>
             </form>
 
+            <p style={{ color: '#64748b', fontSize: '13px', marginTop: '18px', marginBottom: 0 }}>
+              Didn’t get the code? Check your spam folder, or{' '}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending}
+                style={{ background: 'none', border: 'none', padding: 0, color: '#15803d', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+              >
+                {resending ? 'sending…' : 'send a new one'}
+              </button>.
+            </p>
+
             <button
               onClick={() => setCurrentPage('signin')}
-              style={{ background: 'none', border: 'none', color: '#15803d', fontWeight: 600, marginTop: '20px', cursor: 'pointer', fontSize: '14px' }}
+              style={{ background: 'none', border: 'none', color: '#15803d', fontWeight: 600, marginTop: '14px', cursor: 'pointer', fontSize: '14px' }}
             >
               Back to Sign In
             </button>

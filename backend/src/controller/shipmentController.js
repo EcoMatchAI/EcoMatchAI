@@ -46,7 +46,7 @@ class LogisticsController {
                 status,
                 location,
                 remarks
-            });
+            }, req.user._id);
             res.status(200).json({
                 success: true,
                 message: 'Shipment status updated successfully.',
