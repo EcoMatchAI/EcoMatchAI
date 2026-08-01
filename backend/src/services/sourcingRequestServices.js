@@ -151,6 +151,10 @@ class SourcingService {
         if (request.buyer.toString() !== buyerId.toString()) {
             throw new Error('Unauthorized. You can only update status of your own sourcing requests.');
         }
+        const allowed = ['OPEN', 'FULFILLED', 'CLOSED', 'CANCELLED'];
+        if (!allowed.includes(status)) {
+            throw new Error(`Invalid status. Allowed values: ${allowed.join(', ')}`);
+        }
         request.status = status;
         await request.save();
         return request;

@@ -51,6 +51,13 @@ const sourcingRequestSchema = new mongoose.Schema({
         ref: "Address",
         required: true
     },
+    // The service filters on `status` (defaulting to 'OPEN') and updateRequestStatus
+    // writes to it. Without this field every list query matched nothing.
+    status: {
+        type: String,
+        enum: ['OPEN', 'FULFILLED', 'CLOSED', 'CANCELLED'],
+        default: 'OPEN'
+    },
 
 }, { timestamps: true });
 

@@ -29,10 +29,20 @@ class LogisticsService {
             pincode
         };
     }
-async updateShipmentStatus(waybillNumber, { status, location, remarks }) {
+async updateShipmentStatus(waybillNumber, { status, location, remarks }, userId) {
         const shipment = await Shipment.findOne({ waybillNumber });
         if (!shipment) {
             throw new Error('Shipment waybill not found.');
+        }
+
+        // Only the two parties on the shipment may move it along. Without this any
+        // logged-in user could mark anyone else's shipment DELIVERED or CANCELLED.
+        if (userId) {
+            const isParty = shipment.seller.toString() === userId.toString()
+                || shipment.buyer.toString() === userId.toString();
+            if (!isParty) {
+                throw new Error('You are not a party to this shipment.');
+            }
         }
 
         const validStatuses = ['MANIFESTED', 'PICKUP_SCHEDULED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];

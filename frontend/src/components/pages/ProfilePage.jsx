@@ -10,7 +10,7 @@ import {
   CoffeeIcon, TextilesIcon, WoodIcon, GrainIcon, PlasticsIcon, MetalsIcon
 } from '../common/Icons';
 import avatarImg from '../../assets/avatar.png';
-import { apiGetProfile, apiUpdateProfile, apiRequestEmailChange, apiGetMyProducts, isLoggedIn } from '../../lib/api';
+import { apiGetProfile, apiUpdateProfile, apiGetMyProducts, isLoggedIn } from '../../lib/api';
 
 // Map a material id (stored on the backend) back to its display icon.
 const MATERIAL_ICONS = {
@@ -53,13 +53,13 @@ const buildStats = (user, activeListingsCount = 0) => {
   ];
 };
 
+// Only fields the backend user schema actually stores.
 const DETAIL_FIELDS = [
-  { key: 'fullName', label: 'Full Name', icon: <User size={15} /> },
-  { key: 'designation', label: 'Designation', icon: <Briefcase size={15} /> },
-  { key: 'email', label: 'Email', icon: <Mail size={15} />, type: 'email' },
+  { key: 'fullName', label: 'Business / Full Name', icon: <User size={15} /> },
+  { key: 'designation', label: 'Industry / Field of Interest', icon: <Briefcase size={15} /> },
+  { key: 'email', label: 'Email', icon: <Mail size={15} />, type: 'email', readOnly: true },
   { key: 'phone', label: 'Phone', icon: <Phone size={15} />, type: 'tel' },
-  { key: 'location', label: 'Location', icon: <MapPin size={15} /> },
-  { key: 'company', label: 'Company', icon: <Building2 size={15} /> },
+  { key: 'gstin', label: 'GSTIN', icon: <Building2 size={15} /> },
 ];
 
 const LISTINGS = [
@@ -74,30 +74,25 @@ const REVIEWS = [
 ];
 
 const EMPTY_DETAILS = {
-  fullName: '', designation: '', email: '', phone: '', location: '', company: '',
+  fullName: '', designation: '', email: '', phone: '', gstin: '',
 };
 
 // Build the flat `details` object the UI renders from the API user document.
-const detailsFromUser = (user) => {
-  const pd = user.personalDetails || {};
-  const bd = user.businessDetails || {};
-  return {
-    fullName: pd.fullName || user.name || '',
-    designation: pd.designation || '',
-    email: user.email || '',
-    phone: pd.phone || '',
-    location: pd.location || bd.city || '',
-    company: pd.company || '',
-  };
-};
+// Field names follow the backend user schema (businessName / phoneNumber /
+// FieldOfInterest / GSTIN) — those are the only ones the API actually stores.
+const detailsFromUser = (user) => ({
+  fullName: user.businessName || '',
+  designation: user.FieldOfInterest || '',
+  email: user.email || '',
+  phone: user.phoneNumber || '',
+  gstin: user.GSTIN || '',
+});
 
-// Rough profile-completion percentage from the fields we actually collect.
+// Rough profile-completion percentage from the fields the backend actually stores.
 const computeCompletion = (user) => {
-  const pd = user.personalDetails || {};
-  const bd = user.businessDetails || {};
   const fields = [
-    pd.fullName || user.name, pd.designation, user.email, pd.phone,
-    pd.location || bd.city, pd.company, bd.industry, bd.companySize,
+    user.businessName, user.email, user.phoneNumber,
+    user.FieldOfInterest, user.GSTIN, user.role,
   ];
   const filled = fields.filter((v) => v && String(v).trim()).length;
   return Math.round((filled / fields.length) * 100);
@@ -120,10 +115,13 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
     }
     let cancelled = false;
     apiGetProfile()
-      .then(({ user }) => {
+      // GET /api/user/profile returns the user document itself; PATCH /api/user
+      // wraps it as { user }. Accept either shape.
+      .then((res) => {
         if (cancelled) return;
-        setUser(user);
-        setDetails(detailsFromUser(user));
+        const loaded = res?.user || res;
+        setUser(loaded);
+        setDetails(detailsFromUser(loaded));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -150,10 +148,10 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
 
   const completion = user ? computeCompletion(user) : 0;
 
-  // Real role tags / materials derived from the loaded user.
+  // The backend stores a single `role` (SELLER = generator, BUYER = upcycler).
   const roleTags = [];
-  if (user?.businessTypes?.generator) roleTags.push({ key: 'generator', label: 'Generator', cls: 'generator' });
-  if (user?.businessTypes?.upcycler) roleTags.push({ key: 'upcycler', label: 'Upcycler', cls: 'upcycler' });
+  if (user?.role === 'SELLER') roleTags.push({ key: 'generator', label: 'Generator', cls: 'generator' });
+  if (user?.role === 'BUYER') roleTags.push({ key: 'upcycler', label: 'Upcycler', cls: 'upcycler' });
 
   const activeMaterials = (user?.materials || [])
     .filter((m) => m.selection !== 'none')
@@ -171,28 +169,18 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
     }
     setSaving(true);
     try {
-      // Email changes go through a verification flow, not a direct save.
-      const emailChanged = draft.email.trim() && draft.email.trim().toLowerCase() !== details.email.toLowerCase();
-      if (emailChanged) {
-        const r = await apiRequestEmailChange(draft.email.trim());
-        triggerToast(r.message || `Confirmation link sent to ${draft.email.trim()}.`);
-      }
-
-      // Save the remaining personal details directly.
+      // The backend has no email-change flow yet, so email is read-only here.
+      // Send only the fields PATCH /api/user actually accepts.
       const res = await apiUpdateProfile({
-        personalDetails: {
-          fullName: draft.fullName,
-          designation: draft.designation,
-          phone: draft.phone,
-          location: draft.location,
-          company: draft.company,
-        },
+        businessName: draft.fullName,
+        FieldOfInterest: draft.designation,
+        phoneNumber: draft.phone,
+        GSTIN: draft.gstin,
       });
       setUser(res.user);
-      // Keep showing the current (verified) email until the change is confirmed.
       setDetails({ ...detailsFromUser(res.user) });
       setEditing(false);
-      if (!emailChanged) triggerToast(res.message || 'Profile details updated successfully!');
+      triggerToast(res.message || 'Profile details updated successfully!');
     } catch (err) {
       if (err.status === 401) {
         triggerToast('Session expired. Please sign in again.', 'error');
@@ -230,14 +218,14 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
               <div className="profile-hero-info">
                 <div className="profile-hero-name-row">
                   <h1 className="profile-hero-name">{details.fullName}</h1>
-                  <span className="profile-verified"><BadgeCheck size={15} /> Verified</span>
+                  {user?.isEmailVerified && (
+                    <span className="profile-verified"><BadgeCheck size={15} /> Verified</span>
+                  )}
                 </div>
                 <div className="profile-hero-meta">
-                  <span><Briefcase size={14} /> {details.designation}</span>
-                  <span className="profile-hero-dot">·</span>
-                  <span><Building2 size={14} /> {details.company}</span>
-                  <span className="profile-hero-dot">·</span>
-                  <span><MapPin size={14} /> {details.location}</span>
+                  {details.designation && <span><Briefcase size={14} /> {details.designation}</span>}
+                  {details.designation && details.gstin && <span className="profile-hero-dot">·</span>}
+                  {details.gstin && <span><Building2 size={14} /> GSTIN {details.gstin}</span>}
                 </div>
                 <div className="profile-hero-tags">
                   {roleTags.map((t) => (
@@ -300,7 +288,7 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
                   {DETAIL_FIELDS.map((f) => (
                     <div key={f.key} className="profile-detail-item">
                       <span className="profile-detail-label">{f.icon}{f.label}</span>
-                      {editing ? (
+                      {editing && !f.readOnly ? (
                         <input
                           className="pref-input"
                           type={f.type || 'text'}
@@ -320,10 +308,7 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
                 <div className="dash-panel-head"><h2 className="dash-panel-title">About</h2></div>
                 <p className="profile-about-text">
                   {details.fullName || 'This member'}
-                  {details.designation ? ` is the ${details.designation}` : ''}
-                  {details.company ? ` at ${details.company}` : ''}
-                  {details.location ? `, based in ${details.location}` : ''}
-                  {user?.businessDetails?.industry ? ` — operating in ${INDUSTRY_LABELS[user.businessDetails.industry] || user.businessDetails.industry}` : ''}
+                  {details.designation ? ` works in ${INDUSTRY_LABELS[details.designation] || details.designation}` : ''}
                   {roleTags.length ? ` as a ${roleTags.map((t) => t.label).join(' & ')} on EcoMatch.` : ' on EcoMatch.'}
                 </p>
               </section>
@@ -363,10 +348,12 @@ export const ProfilePage = ({ currentPage, setCurrentPage, triggerToast }) => {
                     <span className="profile-contact-icon"><Phone size={16} /></span>
                     <span className="profile-contact-val">{details.phone}</span>
                   </a>
-                  <div className="profile-contact-row">
-                    <span className="profile-contact-icon"><MapPin size={16} /></span>
-                    <span className="profile-contact-val">{details.location}</span>
-                  </div>
+                  {details.gstin && (
+                    <div className="profile-contact-row">
+                      <span className="profile-contact-icon"><MapPin size={16} /></span>
+                      <span className="profile-contact-val">GSTIN {details.gstin}</span>
+                    </div>
+                  )}
                 </div>
                 <button className="profile-contact-btn" onClick={() => setCurrentPage('messages')}>
                   <MessageSquare size={16} /> Open Inbox
