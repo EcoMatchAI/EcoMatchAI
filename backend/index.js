@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDb = require('./src/config/db');
 const { verifyMailer } = require('./src/util/emailService');
+const { initSocket } = require('./src/socket');
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,7 @@ const productRoutes = require('./src/routes/productRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
 const sourcingRoutes = require('./src/routes/sourcingRequestRoutes');
 const logisticsRoutes = require('./src/routes/shipmentRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -23,6 +25,7 @@ app.use('/api/product', productRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/sourcing-requests', sourcingRoutes);
 app.use('/api/logistics', logisticsRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Unknown route -> JSON, not Express's HTML error page (the frontend parses JSON).
 app.use((req, res) => {
@@ -36,6 +39,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+const io = initSocket(server);
 
 // Connect to Mongo BEFORE accepting traffic. Previously connectDb() ran inside the
 // listen callback, so a connection failure became an unhandled rejection that
@@ -50,7 +55,10 @@ const start = async () => {
 
     await verifyMailer(); // logs loudly at boot if OTP email will not work
 
-    app.listen(PORT, () => console.log(`Backend started on port ${PORT}`));
+    server.listen(PORT, async () => {
+    console.log(`Server & WebSocket running on port ${PORT}`);
+    await connectDb();
+});
 };
 
 start();
