@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MailCheck, Loader2, KeyRound, Recycle, LogOut } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const wrap = {
   minHeight: '100vh', display: 'grid', placeItems: 'center',
@@ -21,16 +21,19 @@ const iconBadge = {
 };
 
 export const CheckEmailPage = ({ setCurrentPage, triggerToast }) => {
-  const { user, getPendingEmail, logout, refreshUser, loading: authLoading } = useAuth();
+  const { user, getPendingEmail, logout, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     const e = getPendingEmail() || user?.email || '';
     setEmail(e);
     if (user?.isEmailVerified) {
       triggerToast('Email is already verified! Moving to profile setup...');
       setCurrentPage(user?.accountStatus === 'ACTIVE' ? 'dashboard' : 'preferences');
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleSignOut = () => {

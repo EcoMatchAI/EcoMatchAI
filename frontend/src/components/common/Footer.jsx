@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MessageSquarePlus, X, Send, Star } from 'lucide-react';
 import { SignInLogo } from './Icons';
 

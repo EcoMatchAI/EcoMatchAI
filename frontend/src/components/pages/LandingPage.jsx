@@ -1,4 +1,3 @@
-import React from 'react';
 import { Globe, ChevronDown, Bell, Cloud, Box, Search, Menu } from 'lucide-react';
 import {
   SignInLogo, BrainAIIcon, PackagingIcon, SkincareIcon, FurnitureIcon, FeedIcon

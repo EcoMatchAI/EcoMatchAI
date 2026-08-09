@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2, Recycle } from 'lucide-react';
 import { apiVerifyEmailChange, isLoggedIn } from '../../lib/api';
@@ -31,6 +31,7 @@ export const VerifyEmailChangePage = ({ setCurrentPage }) => {
     ran.current = true;
 
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus('error');
       setMessage('No confirmation token was provided in the link.');
       return;

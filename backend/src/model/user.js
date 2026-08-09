@@ -37,6 +37,41 @@ const userSchema = mongoose.Schema({
         ref: "Address"
     }],
 
+    // ---- Business profile (collected by the Preferences questionnaire) ----
+    // A company can be both a generator (supplies waste) and an upcycler (consumes
+    // it). `role` only holds one value, so the pair is stored separately.
+    businessTypes: {
+        generator: { type: Boolean, default: false },
+        upcycler: { type: Boolean, default: false }
+    },
+    businessDetails: {
+        industry: { type: String, default: null },
+        companySize: { type: String, default: null },
+        address: { type: String, default: null },
+        city: { type: String, default: null },
+        serviceRadius: { type: String, default: null },
+        gstNumber: { type: String, default: null },
+        docName: { type: String, default: null }
+    },
+    generatorInfo: {
+        byproducts: { type: String, default: null },
+        volume: { type: String, default: null },
+        frequency: { type: String, default: null }
+    },
+    upcyclerInfo: {
+        feedstock: { type: String, default: null },
+        purity: { type: String, default: null },
+        minVolume: { type: String, default: null },
+        maxVolume: { type: String, default: null },
+        maxDistance: { type: String, default: null }
+    },
+    materials: [{
+        _id: false,
+        id: { type: String },
+        name: { type: String },
+        selection: { type: String, enum: ['primary', 'secondary', 'none'], default: 'none' }
+    }],
+
     role: {
         type: String,
         enum: [

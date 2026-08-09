@@ -1,563 +1,1193 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Box, Recycle, MapPin, Menu, X, SlidersHorizontal,
-  Calendar, Droplet, Tag, Clock, Layers, Package, Truck,
-  Building2, FileText, BadgeCheck, IndianRupee, Loader2
+  Box, MapPin, X, Package, IndianRupee, Loader2, AlertCircle,
+  Search, RefreshCw, ShoppingBag, Send, CheckCircle2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
-import { apiGetProducts, apiCreateSourcingRequest } from '../../lib/api';
+import Modal from '../common/Modal';
+import {
+  apiGetProducts,
+  apiCreateSourcingRequest,
+  apiGetPaymentConfig,
+  apiGetPaymentQuote
+} from '../../lib/api';
+import { startCheckout, formatRupees } from '../../lib/razorpay';
+import { useAuth } from '../../context/useAuth';
 
 import coffeeImg from '../../assets/coffee_grounds.png';
 import fabricImg from '../../assets/fabric_waste.png';
 import woodImg from '../../assets/wood_offcuts.png';
 
-/* ----------------------------------------------------------------------------
-   Marketplace Listings — full core listing fields per product
-   ---------------------------------------------------------------------------- */
-const LISTINGS = [
-  {
-    id: 1,
-    title: '120kg Spent Coffee Grounds — Daily Supply',
-    category: 'Organic',
-    description: 'Freshly extracted spent coffee grounds from a high-volume cafe. Collected daily, high in nitrogen and antioxidants. Ideal for skincare extraction, biofuel, or compost.',
-    img: coffeeImg,
-    gallery: [coffeeImg, woodImg, fabricImg],
-    quantity: '120 kg',
-    frequency: 'Daily',
-    availability: 'Available from Wed, 14 Aug',
-    purity: '92% (high)',
-    moisture: 'Wet (~60%)',
-    price: '₹8 / kg',
-    pricingModel: 'Negotiable',
-    location: 'Koregaon Park, Pune',
-    logistics: 'Local Pickup',
-    packaging: 'Bagged (25kg sacks)',
-    source: 'GreenBrew Co.',
-    verified: true,
-    certifications: 'Food-grade handling certificate',
-    status: 'Active',
-    score: 94,
-  },
-  {
-    id: 2,
-    title: '350kg Recycled Textile Fabric — Assorted',
-    category: 'Textiles',
-    description: 'Clean, sorted fabric scraps from clothing manufacturing. Mixed cotton/polyester blends suitable for insulation, upcycling, or rag production.',
-    img: fabricImg,
-    gallery: [fabricImg, coffeeImg, woodImg],
-    quantity: '350 kg',
-    frequency: 'Monthly',
-    availability: 'Available now',
-    purity: '85% (Grade B)',
-    moisture: 'Dry',
-    price: '₹15 / kg',
-    pricingModel: 'Fixed',
-    location: 'Hadapsar, Pune',
-    logistics: 'Freight (supplier-arranged)',
-    packaging: 'Palletised',
-    source: 'Pune Textiles Guild',
-    verified: true,
-    certifications: 'OEKO-TEX material report',
-    status: 'Active',
-    score: 88,
-  },
-  {
-    id: 3,
-    title: '500kg Premium Wood Offcuts — Hardwood Mix',
-    category: 'Wood',
-    description: 'Assorted pine, oak, and plywood offcuts from furniture production. Untreated and clean — perfect for wood crafts, pellet production, or biomass.',
-    img: woodImg,
-    gallery: [woodImg, fabricImg, coffeeImg],
-    quantity: '500 kg',
-    frequency: 'Monthly',
-    availability: 'Available from Mon, 19 Aug',
-    purity: 'Grade A (untreated)',
-    moisture: 'Dry (kiln)',
-    price: 'Free — disposal saving',
-    pricingModel: 'Free',
-    location: 'Bhosari MIDC, Pune',
-    logistics: 'Buyer-arranged',
-    packaging: 'Loose / bulk',
-    source: 'Apex Woodworks',
-    verified: false,
-    certifications: '—',
-    status: 'Active',
-    score: 92,
-  },
-  {
-    id: 4,
-    title: '800kg Spent Brewery Grain — Feed Quality',
-    category: 'Organic',
-    description: 'Wet spent barley grains from craft brewing. High moisture and protein content — ideal for livestock feed, compost, or food upcycling.',
-    img: coffeeImg,
-    gallery: [coffeeImg, woodImg, fabricImg],
-    quantity: '800 kg',
-    frequency: 'Weekly',
-    availability: 'Pickup Thursdays',
-    purity: '90% (high protein)',
-    moisture: 'Wet (~75%)',
-    price: '₹5 / kg',
-    pricingModel: 'Negotiable',
-    location: 'Viman Nagar, Pune',
-    logistics: 'Local Pickup',
-    packaging: 'Bulk container',
-    source: 'GreenBrew Co.',
-    verified: true,
-    certifications: 'Feed-safety lab report',
-    status: 'Reserved',
-    score: 90,
-  },
-  {
-    id: 5,
-    title: '200kg Mixed PET Plastic Scraps',
-    category: 'Plastics',
-    description: 'Clean post-industrial PET scraps from packaging line. Sorted by colour, low contamination — suitable for re-pelletising and fibre production.',
-    img: fabricImg,
-    gallery: [fabricImg, coffeeImg, woodImg],
-    quantity: '200 kg',
-    frequency: 'Weekly',
-    availability: 'Available now',
-    purity: '95% (Grade A)',
-    moisture: 'Dry',
-    price: '₹22 / kg',
-    pricingModel: 'Fixed',
-    location: 'Chakan, Pune',
-    logistics: 'Courier',
-    packaging: 'Bagged',
-    source: 'CleanPoly Ltd',
-    verified: true,
-    certifications: 'Polymer purity certificate',
-    status: 'Active',
-    score: 86,
-  },
-  {
-    id: 6,
-    title: '1.2T Steel Turnings & Metal Offcuts',
-    category: 'Metals',
-    description: 'Mild-steel machining turnings and offcuts from a fabrication unit. Oil-free and segregated — ready for re-melting or scrap recovery.',
-    img: woodImg,
-    gallery: [woodImg, fabricImg, coffeeImg],
-    quantity: '1,200 kg',
-    frequency: 'Monthly',
-    availability: 'Available from Fri, 23 Aug',
-    purity: 'Grade A (segregated)',
-    moisture: 'Dry',
-    price: '₹40 / kg',
-    pricingModel: 'Negotiable',
-    location: 'Pimpri, Pune',
-    logistics: 'Freight (supplier-arranged)',
-    packaging: 'Palletised',
-    source: 'IronWorks Fabrication',
-    verified: true,
-    certifications: 'Material composition report',
-    status: 'Active',
-    score: 83,
-  },
-];
+const CATEGORIES = ['Organic', 'Textiles', 'Wood', 'Plastics', 'Metals', 'Grain'];
 
-const STATUS_STYLES = {
-  Active: 'status-active',
-  Reserved: 'status-reserved',
-  Paused: 'status-paused',
-  Completed: 'status-completed',
-  Expired: 'status-expired',
+/* Product categories and sourcing-request materialCategory are two different
+   enums on the backend. Blindly upper-casing the product category produced
+   TEXTILES / PLASTICS / METALS / WOOD / GRAIN, none of which the sourcing schema
+   accepts, so submitting a request failed validation for every category but
+   Organic. This maps one enum onto the other. */
+const SOURCING_CATEGORY = {
+  Organic: 'ORGANIC',
+  Textiles: 'TEXTILE',
+  Wood: 'OTHER',
+  Plastics: 'PLASTIC',
+  Metals: 'METAL',
+  Grain: 'ORGANIC',
 };
 
 export const MarketplacePage = ({ currentPage, setCurrentPage, triggerToast }) => {
-  // Marketplace Filter States
-  const [filterRadius, setFilterRadius] = useState('25km');
-  const [filterOrganic, setFilterOrganic] = useState(false);
-  const [filterTextiles, setFilterTextiles] = useState(false);
-  const [filterWood, setFilterWood] = useState(false);
-  const [filterPlastics, setFilterPlastics] = useState(false);
-  const [filterMetals, setFilterMetals] = useState(false);
-  const [filterPurity, setFilterPurity] = useState(true);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const { user } = useAuth();
 
-  // Selected product for the detail modal
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [activeImage, setActiveImage] = useState(0);
-  const [dbProducts, setDbProducts] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  // The top-nav search box and shared listing links both arrive as
+  // `/marketplace?search=…&city=…&category=…`. Seeding the filters from the URL
+  // is what makes those entry points do anything at all.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+  const initialCity = searchParams.get('city') || '';
+  const initialCategories = (searchParams.get('category') || '')
+    .split(',')
+    .map((c) => c.trim())
+    .filter((c) => CATEGORIES.includes(c));
 
+  // Filter state
+  const [selectedCategories, setSelectedCategories] = useState(initialCategories);
+  const [cityInput, setCityInput] = useState(initialCity);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [minQty, setMinQty] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 9;
+
+  // Debounced filters state
+  const [debouncedFilters, setDebouncedFilters] = useState({
+    city: initialCity,
+    search: initialSearch,
+    minQuantity: 0
+  });
+
+  // API Products State
+  const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Selected product detail modal
+  const [activeProduct, setActiveProduct] = useState(null);
+
+  // Request to Source Modal State
+  const [sourcingModalOpen, setSourcingModalOpen] = useState(false);
+  const [sourcingSubmitting, setSourcingSubmitting] = useState(false);
+  const [sourcingSuccess, setSourcingSuccess] = useState(false);
+  const [sourcingForm, setSourcingForm] = useState({
+    quantityRequired: '',
+    unit: 'KG',
+    maxBudgetPerUnit: '',
+    urgencyLevel: 'MEDIUM',
+    description: '',
+    locationName: '',
+    address: '',
+    locality: '',
+    pincode: '',
+    state: '',
+    phoneNumber: ''
+  });
+
+  // Buy & Ship Checkout Modal State
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState({ configured: true });
+  const [checkingConfig, setCheckingConfig] = useState(false);
+  const [checkoutQty, setCheckoutQty] = useState(1);
+  const [destinationPincode, setDestinationPincode] = useState('');
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteData, setQuoteData] = useState(null);
+  const [quoteError, setQuoteError] = useState(null);
+  const [checkoutStage, setCheckoutStage] = useState('idle'); // 'idle' | 'creating' | 'awaiting-payment' | 'verifying' | 'paid' | 'failed'
+  const [checkoutResult, setCheckoutResult] = useState(null);
+  const [checkoutError, setCheckoutError] = useState(null);
+
+  // A search submitted from the top nav changes the query string without
+  // remounting this page, so the URL has to be watched, not just read once.
+  const urlSearch = searchParams.get('search') || '';
+  const urlCity = searchParams.get('city') || '';
   useEffect(() => {
-    let active = true;
-    setLoadingProducts(true);
-    apiGetProducts()
-      .then((res) => {
-        if (!active) return;
-        if (res?.products && Array.isArray(res.products)) {
-          const formatted = res.products.map((p) => ({
-            id: p._id,
-            _id: p._id,
-            title: p.title,
-            category: p.category,
-            description: p.description,
-            img: p.photos?.[0] || (p.category === 'Organic' ? coffeeImg : p.category === 'Textiles' ? fabricImg : woodImg),
-            gallery: p.photos?.length ? p.photos : [coffeeImg, woodImg, fabricImg],
-            quantity: `${p.quantity} ${p.unit || 'kg'}`,
-            frequency: p.frequency || 'Weekly',
-            availability: 'Available now',
-            purity: p.purity || 'Standard',
-            moisture: 'Dry',
-            price: `₹${p.price} / ${p.priceUnit || 'kg'}`,
-            pricingModel: p.price > 0 ? 'Fixed' : 'Free',
-            location: p.city,
-            logistics: 'Local Pickup',
-            packaging: 'Bagged',
-            source: p.seller?.businessName || 'EcoMatch Seller',
-            verified: true,
-            certifications: p.docName?.join(', ') || 'Standard Compliance',
-            status: p.status || 'Active',
-            score: 92,
-          }));
-          setDbProducts(formatted);
-        }
-      })
-      .catch((err) => {
-        console.warn('Backend product fetch error:', err.message);
-      })
-      .finally(() => {
-        if (active) setLoadingProducts(false);
-      });
-    return () => { active = false; };
-  }, []);
+    // The URL is an external system this page subscribes to, which is exactly the
+    // case the lint rule cannot distinguish from derived-state duplication.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchInput(urlSearch);
+    setCityInput(urlCity);
+  }, [urlSearch, urlCity]);
 
-  const allListings = [...dbProducts, ...LISTINGS];
+  // Debounce inputs. Only commit when a value really changed — building a fresh
+  // object every time gave it a new identity, which refetched on mount and again
+  // on any unrelated re-render. The last committed value lives in a ref so this
+  // stays out of the effect's dependency list.
+  const committedFiltersRef = useRef(debouncedFilters);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const next = {
+        city: cityInput.trim(),
+        search: searchInput.trim(),
+        minQuantity: Number(minQty) || 0
+      };
+      const prev = committedFiltersRef.current;
+      if (
+        prev.city === next.city &&
+        prev.search === next.search &&
+        prev.minQuantity === next.minQuantity
+      ) {
+        return;
+      }
+      committedFiltersRef.current = next;
+      setDebouncedFilters(next);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [cityInput, searchInput, minQty]);
 
-  const handleRequestSource = async (item) => {
+  // Fetch products from API
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      // If user is logged in and sending request for a product
-      triggerToast(`Sourcing request sent for "${item.title}"!`);
+      const categoryParam = selectedCategories.length > 0 ? selectedCategories.join(',') : undefined;
+      const params = {
+        category: categoryParam,
+        city: debouncedFilters.city || undefined,
+        search: debouncedFilters.search || undefined,
+        minQuantity: debouncedFilters.minQuantity > 0 ? debouncedFilters.minQuantity : undefined,
+        page,
+        limit
+      };
+
+      // GET /api/product answers { products, total, page, totalPages } — there is
+      // no `success` flag and no `pagination` wrapper. Testing for those made the
+      // page throw its own error on every successful response.
+      const res = await apiGetProducts(params);
+      const list = Array.isArray(res?.products) ? res.products : [];
+      setProducts(list);
+      setTotalCount(typeof res?.total === 'number' ? res.total : list.length);
+      setTotalPages(Math.max(1, res?.totalPages || 1));
     } catch (err) {
-      triggerToast(err.message || 'Sourcing request failed.', 'error');
+      setError(err.message || 'Could not connect to marketplace server.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const openProduct = (item) => {
-    setSelectedProduct(item);
-    setActiveImage(0);
+  useEffect(() => {
+    // Data fetching necessarily writes loading/result state; fetchProducts closes
+    // over the current filters and is recreated each render, so the effect always
+    // calls an up-to-date copy.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategories, debouncedFilters, page]);
+
+  // Mirror the active filters back into the address bar so the view can be
+  // bookmarked and shared. `replace` keeps typing out of the history stack.
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (debouncedFilters.search) next.set('search', debouncedFilters.search);
+    if (debouncedFilters.city) next.set('city', debouncedFilters.city);
+    if (selectedCategories.length) next.set('category', selectedCategories.join(','));
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedFilters, selectedCategories]);
+
+  // Check Payment Config when opening checkout
+  const checkPaymentSetup = async () => {
+    setCheckingConfig(true);
+    try {
+      const res = await apiGetPaymentConfig();
+      if (res) {
+        setPaymentConfig(res);
+      }
+    } catch (err) {
+      console.warn('Payment config check failed:', err.message);
+    } finally {
+      setCheckingConfig(false);
+    }
   };
-  const closeProduct = () => setSelectedProduct(null);
 
-  const categoryIcon = (cat) =>
-    cat === 'Organic' ? <Box size={14} /> : cat === 'Metals' ? <Layers size={14} /> : <Recycle size={14} />;
+  // Toggle Category Selection
+  const toggleCategory = (cat) => {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+    setPage(1);
+  };
 
-  const detailFields = (p) => [
-    { icon: <Tag size={15} />, label: 'Material Category', value: p.category },
-    { icon: <Box size={15} />, label: 'Quantity', value: p.quantity },
-    { icon: <Clock size={15} />, label: 'Frequency', value: p.frequency },
-    { icon: <Calendar size={15} />, label: 'Availability', value: p.availability },
-    { icon: <BadgeCheck size={15} />, label: 'Purity / Grade', value: p.purity },
-    { icon: <Droplet size={15} />, label: 'Moisture / Condition', value: p.moisture },
-    { icon: <IndianRupee size={15} />, label: 'Price', value: p.price },
-    { icon: <Tag size={15} />, label: 'Pricing Model', value: p.pricingModel },
-    { icon: <MapPin size={15} />, label: 'Location', value: p.location },
-    { icon: <Truck size={15} />, label: 'Logistics Term', value: p.logistics },
-    { icon: <Package size={15} />, label: 'Packaging', value: p.packaging },
-    { icon: <FileText size={15} />, label: 'Certifications', value: p.certifications },
-  ];
+  const getProductImage = (p) => {
+    if (p.photos && p.photos.length > 0 && p.photos[0]) return p.photos[0];
+    if (p.category === 'Organic' || p.category === 'Grain') return coffeeImg;
+    if (p.category === 'Textiles') return fabricImg;
+    return woodImg;
+  };
+
+  // Open Sourcing Request Modal
+  const handleOpenSourcingModal = (product) => {
+    setActiveProduct(product);
+    setSourcingSuccess(false);
+    setSourcingForm({
+      quantityRequired: product.quantity ? String(product.quantity) : '100',
+      unit: product.unit || 'KG',
+      maxBudgetPerUnit: product.price ? String(product.price) : '10',
+      urgencyLevel: 'MEDIUM',
+      description: `Requesting to source material from listing: ${product.title}`,
+      locationName: user?.businessName || '',
+      address: '',
+      locality: product.city || '',
+      pincode: '',
+      state: 'Maharashtra',
+      phoneNumber: user?.phoneNumber || ''
+    });
+    setSourcingModalOpen(true);
+  };
+
+  // Submit Sourcing Request Form
+  const handleSubmitSourcing = async (e) => {
+    e.preventDefault();
+    if (!sourcingForm.quantityRequired || Number(sourcingForm.quantityRequired) <= 0) {
+      triggerToast('Please enter a valid quantity required.', 'error');
+      return;
+    }
+    if (!sourcingForm.maxBudgetPerUnit || Number(sourcingForm.maxBudgetPerUnit) < 0) {
+      triggerToast('Please enter a valid budget per unit.', 'error');
+      return;
+    }
+    if (!sourcingForm.pincode || !/^\d{6}$/.test(sourcingForm.pincode)) {
+      triggerToast('Please enter a valid 6-digit pincode.', 'error');
+      return;
+    }
+
+    setSourcingSubmitting(true);
+    try {
+      const payload = {
+        title: `Sourcing Request: ${activeProduct?.title || 'Material'}`,
+        materialCategory: SOURCING_CATEGORY[activeProduct?.category] || 'OTHER',
+        specificMaterial: activeProduct?.title || 'Byproduct',
+        quantityRequired: Number(sourcingForm.quantityRequired),
+        unit: sourcingForm.unit,
+        maxBudgetPerUnit: Number(sourcingForm.maxBudgetPerUnit),
+        urgencyLevel: sourcingForm.urgencyLevel,
+        description: sourcingForm.description,
+        location: {
+          name: sourcingForm.locationName || user?.businessName || 'Delivery Location',
+          address: sourcingForm.address || 'Factory / Depot Address',
+          locality: sourcingForm.locality || activeProduct?.city || 'City',
+          pincode: sourcingForm.pincode,
+          state: sourcingForm.state || 'State',
+          phoneNumber: sourcingForm.phoneNumber || '9999999999'
+        },
+        product: activeProduct?._id
+      };
+
+      const res = await apiCreateSourcingRequest(payload);
+      if (res?.success) {
+        setSourcingSuccess(true);
+        triggerToast('Sourcing request submitted successfully!');
+      } else {
+        throw new Error(res?.message || 'Failed to submit sourcing request.');
+      }
+    } catch (err) {
+      triggerToast(err.message || 'Sourcing request failed.', 'error');
+    } finally {
+      setSourcingSubmitting(false);
+    }
+  };
+
+  // Open Checkout Modal
+  const handleOpenCheckoutModal = async (product) => {
+    setActiveProduct(product);
+    setCheckoutQty(product.quantity ? Math.min(product.quantity, 100) : 1);
+    setDestinationPincode('');
+    setQuoteData(null);
+    setQuoteError(null);
+    setCheckoutStage('idle');
+    setCheckoutResult(null);
+    setCheckoutError(null);
+    setCheckoutModalOpen(true);
+    await checkPaymentSetup();
+  };
+
+  // Refuse to close while an order is being created or verified — dropping the
+  // dialog mid-flight would leave the buyer with no record of what happened.
+  const checkoutBusy = ['creating', 'awaiting-payment', 'verifying'].includes(checkoutStage);
+  const closeCheckout = () => {
+    if (checkoutBusy) {
+      triggerToast('Payment in progress — please wait for it to finish.', 'error');
+      return;
+    }
+    setCheckoutModalOpen(false);
+    setActiveProduct(null);
+  };
+
+  // Get Payment Quote
+  const handleGetQuote = async (e) => {
+    if (e) e.preventDefault();
+    if (!destinationPincode || !/^\d{6}$/.test(destinationPincode)) {
+      setQuoteError('Please enter a valid 6-digit delivery pincode.');
+      return;
+    }
+    const qty = Number(checkoutQty);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setQuoteError('Please enter a quantity of at least 1.');
+      return;
+    }
+    if (activeProduct?.quantity && qty > activeProduct.quantity) {
+      setQuoteError(`Only ${activeProduct.quantity} ${activeProduct.unit || 'kg'} is available in this listing.`);
+      return;
+    }
+
+    setQuoteLoading(true);
+    setQuoteError(null);
+    try {
+      const res = await apiGetPaymentQuote({
+        productId: activeProduct._id,
+        quantity: Number(checkoutQty),
+        destinationPincode
+      });
+      // The endpoint wraps its payload as { success, quote }. Storing `res`
+      // directly left breakdown undefined, and reading .materialCost off it
+      // threw a TypeError that blanked the modal.
+      const quote = res?.quote || res;
+      if (!quote?.breakdown) {
+        throw new Error('The server did not return a price breakdown. Please try again.');
+      }
+      setQuoteData(quote);
+    } catch (err) {
+      setQuoteError(err.message || 'Failed to calculate quote.');
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  // Execute Razorpay Checkout
+  const handleStartPayment = async () => {
+    if (!quoteData) return;
+    setCheckoutError(null);
+
+    try {
+      const result = await startCheckout({
+        productId: activeProduct._id,
+        quantity: Number(checkoutQty),
+        destinationPincode,
+        buyer: {
+          name: user?.businessName || '',
+          email: user?.email || '',
+          contact: user?.phoneNumber || ''
+        },
+        onStage: (stage) => setCheckoutStage(stage)
+      });
+
+      if (result.status === 'paid') {
+        setCheckoutStage('paid');
+        setCheckoutResult(result.order);
+        triggerToast('Payment successful! Order and shipment confirmed.');
+        // The listing's availability changed server-side; the grid behind the
+        // dialog would otherwise keep showing pre-purchase numbers.
+        fetchProducts();
+      } else if (result.status === 'dismissed') {
+        setCheckoutStage('idle');
+        triggerToast('Checkout was closed.');
+      }
+    } catch (err) {
+      setCheckoutStage('failed');
+      setCheckoutError(err.message || 'Payment failed. Please try again.');
+    }
+  };
 
   return (
     <div className="inbox-page-wrapper">
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} triggerToast={triggerToast} />
 
-      {/* Backdrop overlay */}
-      {isFiltersOpen && (
-        <div className="filters-backdrop" onClick={() => setIsFiltersOpen(false)} />
-      )}
-
       <main className="inbox-main-content">
         <Topnav triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
 
-        <div className="inbox-view-container" style={{ display: 'flex', flexDirection: 'column' }}>
-
-          <div className="marketplace-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h1 className="inbox-view-title" style={{ margin: 0 }}>Waste Marketplace</h1>
+        <div className="inbox-view-container">
+          {/* Header */}
+          <div className="dash-header">
+            <div>
+              <h1 className="inbox-view-title mb-1">Waste Marketplace</h1>
+              <p className="dash-subtitle">
+                Discover, source, and purchase verified industrial byproducts and organic waste streams.
+              </p>
+            </div>
             <button
-              className="top-filter-button"
-              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-              title="Toggle Filters"
+              onClick={() => setCurrentPage('createListing')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition-colors"
             >
-              <Menu size={18} />
-              <span>Filters</span>
+              + List Waste Stream
             </button>
           </div>
 
-          <div className="marketplace-layout">
-            {/* Left filters panel */}
-            <aside className={`filters-sidebar ${isFiltersOpen ? 'open' : ''}`}>
-              {/* Drawer Header */}
-              <div className="drawer-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '12px', borderBottom: '1px solid #F3F4F6' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <SlidersHorizontal size={18} style={{ color: '#10B981' }} />
-                  <span style={{ fontSize: '16px', fontWeight: '800', color: '#111827' }}>Filter Materials</span>
+          {/* Search & Filter Bar */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Search text */}
+              <div className="relative flex items-center">
+                <Search size={18} className="absolute left-3.5 text-slate-400" aria-hidden="true" />
+                <input
+                  type="search"
+                  aria-label="Search listings by title or material"
+                  placeholder="Search by title or material..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* City Filter */}
+              <div className="relative flex items-center">
+                <MapPin size={18} className="absolute left-3.5 text-slate-400" aria-hidden="true" />
+                <input
+                  type="text"
+                  aria-label="Filter listings by city"
+                  placeholder="Filter by city (e.g. Pune)..."
+                  value={cityInput}
+                  onChange={(e) => setCityInput(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Min Quantity Slider */}
+              <div className="flex flex-col justify-center px-1">
+                <label htmlFor="min-qty" className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                  <span>Min Quantity</span>
+                  <span>{minQty} kg</span>
+                </label>
+                <input
+                  id="min-qty"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="50"
+                  value={minQty}
+                  onChange={(e) => setMinQty(e.target.value)}
+                  className="accent-emerald-600 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Category Filter Chips */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+              <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mr-1">Categories:</span>
+              <button
+                onClick={() => setSelectedCategories([])}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+                  selectedCategories.length === 0
+                    ? 'bg-emerald-700 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                All
+              </button>
+              {CATEGORIES.map((cat) => {
+                const active = selectedCategories.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => toggleCategory(cat)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+                      active
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Grid section */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-8">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="bg-white rounded-3xl border border-slate-200 p-5 flex flex-col gap-4 animate-pulse">
+                  <div className="w-full h-44 bg-slate-200 rounded-2xl" />
+                  <div className="w-3/4 h-5 bg-slate-200 rounded" />
+                  <div className="w-1/2 h-4 bg-slate-200 rounded" />
+                  <div className="w-full h-12 bg-slate-100 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-8 bg-rose-50 border border-rose-200 rounded-3xl text-center flex flex-col items-center gap-3 my-6">
+              <AlertCircle size={32} className="text-rose-600" />
+              <p className="font-bold text-rose-800 text-base">{error}</p>
+              <button
+                onClick={fetchProducts}
+                className="px-5 py-2.5 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition-colors shadow-sm"
+              >
+                Retry Loading
+              </button>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 flex flex-col items-center gap-4 my-6">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Box size={32} />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-800">No Listings Found</h3>
+                <p className="text-slate-500 text-sm mt-1">
+                  Try adjusting your category selections, search keyword, or city filter.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedCategories([]);
+                  setCityInput('');
+                  setSearchInput('');
+                  setMinQty(0);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Product Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {products.map((p) => {
+                  const isFree = p.price === 0 || p.pricingModel === 'Free — disposal saving';
+
+                  return (
+                    <div
+                      key={p._id}
+                      className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col"
+                    >
+                      {/* Image header */}
+                      <div className="relative w-full h-48 bg-slate-100 overflow-hidden">
+                        <img
+                          src={getProductImage(p)}
+                          alt={p.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-extrabold text-emerald-800 border border-emerald-100 shadow-sm">
+                          {p.category}
+                        </div>
+                        <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold">
+                          {isFree ? 'Free' : `₹${p.price} / ${p.unit || 'kg'}`}
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-5 flex-1 flex flex-col gap-3">
+                        <h3 className="font-extrabold text-slate-800 text-base line-clamp-2 leading-snug">
+                          {p.title}
+                        </h3>
+
+                        <div className="grid grid-cols-2 gap-2 py-2 border-y border-slate-100 text-xs text-slate-600">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <Package size={14} className="text-emerald-600 flex-shrink-0" />
+                            <span>{p.quantity} {p.unit || 'kg'} ({p.frequency || 'Weekly'})</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 truncate">
+                            <MapPin size={14} className="text-emerald-600 flex-shrink-0" />
+                            <span>{p.city}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                          {p.description}
+                        </p>
+
+                        <div className="mt-auto pt-2 flex items-center gap-2">
+                          <button
+                            onClick={() => setActiveProduct(p)}
+                            className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-colors"
+                          >
+                            View Details
+                          </button>
+
+                          {isFree ? (
+                            <button
+                              onClick={() => handleOpenSourcingModal(p)}
+                              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors shadow-sm"
+                            >
+                              Request to Source
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenCheckoutModal(p)}
+                              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1"
+                            >
+                              <ShoppingBag size={14} /> Buy & Ship
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 py-6">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-2 rounded-xl border border-slate-200 bg-white text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span className="text-xs font-bold text-slate-600">
+                    Page {page} of {totalPages} ({totalCount} items)
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="p-2 rounded-xl border border-slate-200 bg-white text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ------------------------------------------------------------------ */}
+        {/* PRODUCT DETAILS MODAL */}
+        {/* ------------------------------------------------------------------ */}
+        {activeProduct && !sourcingModalOpen && !checkoutModalOpen && (
+          <Modal onClose={() => setActiveProduct(null)} size="max-w-2xl" ariaLabel={`Listing details: ${activeProduct.title}`}>
+            <>
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div>
+                  <span className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider">
+                    {activeProduct.category}
+                  </span>
+                  <h3 className="font-extrabold text-slate-800 text-lg">{activeProduct.title}</h3>
                 </div>
                 <button
-                  onClick={() => setIsFiltersOpen(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  type="button"
+                  aria-label="Close listing details"
+                  onClick={() => setActiveProduct(null)}
+                  className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors flex-shrink-0"
                 >
-                  <X size={20} />
+                  <X size={16} />
                 </button>
               </div>
 
-              {/* Category Filter */}
-              <div className="filter-group">
-                <span className="filter-title">Category</span>
-
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" checked={filterOrganic} onChange={(e) => setFilterOrganic(e.target.checked)} />
-                  Organic
-                </label>
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" checked={filterTextiles} onChange={(e) => setFilterTextiles(e.target.checked)} />
-                  Textiles
-                </label>
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" checked={filterWood} onChange={(e) => setFilterWood(e.target.checked)} />
-                  Wood
-                </label>
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" checked={filterPlastics} onChange={(e) => setFilterPlastics(e.target.checked)} />
-                  Plastics
-                </label>
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" checked={filterMetals} onChange={(e) => setFilterMetals(e.target.checked)} />
-                  Metals
-                </label>
-              </div>
-
-              {/* Radius Filter */}
-              <div className="filter-group">
-                <span className="filter-title">Radius</span>
-                <label className="filter-option">
-                  <input type="radio" name="radius" className="filter-radio" checked={filterRadius === '25km'} onChange={() => setFilterRadius('25km')} />
-                  25km
-                </label>
-                <label className="filter-option">
-                  <input type="radio" name="radius" className="filter-radio" checked={filterRadius === '50km'} onChange={() => setFilterRadius('50km')} />
-                  50km
-                </label>
-                <label className="filter-option">
-                  <input type="radio" name="radius" className="filter-radio" checked={filterRadius === '100km+'} onChange={() => setFilterRadius('100km+')} />
-                  100km+
-                </label>
-              </div>
-
-              {/* Quantity Filter */}
-              <div className="filter-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span className="filter-title">Quantity</span>
-                  <span className="filter-sublabel" style={{ fontWeight: 705 }}>kg/week</span>
+              {/* Body */}
+              <div className="p-6 overflow-y-auto flex flex-col gap-6">
+                <div className="w-full h-56 bg-slate-100 rounded-2xl overflow-hidden">
+                  <img src={getProductImage(activeProduct)} alt={activeProduct.title} className="w-full h-full object-cover" />
                 </div>
-                <div className="qty-slider-container">
-                  <div className="slider-rail">
-                    <div className="slider-track"></div>
-                    <div className="slider-handle"></div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Price</span>
+                    <span className="text-sm font-extrabold text-emerald-700">
+                      {activeProduct.price === 0 ? 'Free' : `₹${activeProduct.price} / ${activeProduct.unit || 'kg'}`}
+                    </span>
                   </div>
-                  <div className="slider-labels">
-                    <span>0</span>
-                    <span>12,000</span>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Pricing Model</span>
+                    <span className="text-xs font-bold text-slate-700">{activeProduct.pricingModel || 'Negotiable'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Moisture State</span>
+                    <span className="text-xs font-bold text-slate-700">{activeProduct.moisture || 'Dry'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Logistics</span>
+                    <span className="text-xs font-bold text-slate-700">{activeProduct.logistics || 'Local Pickup'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Packaging</span>
+                    <span className="text-xs font-bold text-slate-700">{activeProduct.packaging || 'Bagged'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Location</span>
+                    <span className="text-xs font-bold text-slate-700">{activeProduct.city}</span>
                   </div>
                 </div>
+
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2">Description</h4>
+                  <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    {activeProduct.description}
+                  </p>
+                </div>
+
+                {activeProduct.seller && (
+                  <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-800 uppercase block">Listed By</span>
+                      <span className="text-sm font-extrabold text-slate-800">
+                        {activeProduct.seller.businessName || 'EcoMatch Seller'}
+                      </span>
+                    </div>
+                    {activeProduct.seller.email && (
+                      <a
+                        href={`mailto:${activeProduct.seller.email}?subject=Enquiry regarding ${encodeURIComponent(activeProduct.title)}`}
+                        className="text-xs font-bold text-emerald-700 underline hover:text-emerald-800"
+                      >
+                        Email Seller
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Purity Filter */}
-              <div className="filter-group">
-                <span className="filter-title">Purity</span>
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" checked={filterPurity} onChange={(e) => setFilterPurity(e.target.checked)} />
-                  90%+
-                </label>
-                <label className="filter-option">
-                  <input type="checkbox" className="filter-checkbox" defaultChecked={false} />
-                  80%+
-                </label>
-              </div>
-
-              {/* Availability Date dropdown */}
-              <div className="filter-group">
-                <span className="filter-title">Availability Date</span>
-                <select className="availability-select" defaultValue="Wed Aug" onChange={() => triggerToast('Availability filter changed')}>
-                  <option value="Wed Aug">Wed Aug</option>
-                  <option value="Sep">Sep</option>
-                  <option value="Oct">Oct</option>
-                </select>
-              </div>
-            </aside>
-
-            {/* Right Listings Grid */}
-            <div className="listings-grid-scroll">
-              <div className="listings-grid">
-                {allListings.map((item) => (
-                  <div
-                    key={item.id}
-                    className="listing-item-card cursor-pointer"
-                    onClick={() => openProduct(item)}
+              {/* Actions Footer */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center gap-3">
+                <button
+                  onClick={() => handleOpenSourcingModal(activeProduct)}
+                  className="flex-1 py-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-colors"
+                >
+                  Request to Source
+                </button>
+                {activeProduct.price > 0 && activeProduct.pricingModel !== 'Free — disposal saving' && (
+                  <button
+                    onClick={() => handleOpenCheckoutModal(activeProduct)}
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5"
                   >
-                    <div className="card-top-header">
-                      <img src={item.img} alt={item.title} className="card-thumb-img" />
-                      <span className="card-top-title">{item.title}</span>
+                    <ShoppingBag size={15} /> Buy & Ship Now
+                  </button>
+                )}
+              </div>
+            </>
+          </Modal>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* REQUEST TO SOURCE MODAL */}
+        {/* ------------------------------------------------------------------ */}
+        {sourcingModalOpen && (
+          <Modal onClose={() => setSourcingModalOpen(false)} size="max-w-xl" ariaLabel="Create sourcing request">
+            <>
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-base">Create Sourcing Request</h3>
+                  <p className="text-xs text-slate-500">Target Listing: {activeProduct?.title}</p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close sourcing request form"
+                  onClick={() => setSourcingModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {sourcingSuccess ? (
+                <div className="p-8 flex flex-col items-center justify-center text-center gap-4 my-auto">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <CheckCircle2 size={36} />
+                  </div>
+                  <h3 className="text-lg font-extrabold text-slate-800">Sourcing Request Sent!</h3>
+                  <p className="text-xs text-slate-500 max-w-sm">
+                    Your sourcing offer has been submitted to the seller. They can accept or decline it from their dashboard.
+                  </p>
+                  <button
+                    onClick={() => setSourcingModalOpen(false)}
+                    className="px-6 py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitSourcing} className="p-6 overflow-y-auto flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Required Quantity</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={sourcingForm.quantityRequired}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, quantityRequired: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Unit</label>
+                      <select
+                        value={sourcingForm.unit}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, unit: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold bg-white"
+                      >
+                        <option value="KG">KG</option>
+                        <option value="TON">TON</option>
+                        <option value="LITERS">LITERS</option>
+                        <option value="PIECES">PIECES</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Max Budget / Unit (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={sourcingForm.maxBudgetPerUnit}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, maxBudgetPerUnit: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">Urgency</label>
+                      <select
+                        value={sourcingForm.urgencyLevel}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, urgencyLevel: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold bg-white"
+                      >
+                        <option value="LOW">LOW</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="IMMEDIATE">IMMEDIATE</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Inline Location Object */}
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col gap-3">
+                    <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                      Pickup / Delivery Address
+                    </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="Company / Contact Name"
+                        required
+                        value={sourcingForm.locationName}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, locationName: e.target.value })}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Phone Number"
+                        required
+                        value={sourcingForm.phoneNumber}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, phoneNumber: e.target.value })}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Street Address"
+                      required
+                      value={sourcingForm.address}
+                      onChange={(e) => setSourcingForm({ ...sourcingForm, address: e.target.value })}
+                      className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white"
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Locality"
+                        required
+                        value={sourcingForm.locality}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, locality: e.target.value })}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="6-Digit Pincode"
+                        required
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={sourcingForm.pincode}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, pincode: e.target.value.replace(/\D/g, '') })}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="State"
+                        required
+                        value={sourcingForm.state}
+                        onChange={(e) => setSourcingForm({ ...sourcingForm, state: e.target.value })}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Additional Notes</label>
+                    <textarea
+                      rows={2}
+                      value={sourcingForm.description}
+                      onChange={(e) => setSourcingForm({ ...sourcingForm, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSourcingModalOpen(false)}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={sourcingSubmitting}
+                      className="px-5 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {sourcingSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                      Submit Sourcing Request
+                    </button>
+                  </div>
+                </form>
+              )}
+            </>
+          </Modal>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* BUY & SHIP CHECKOUT MODAL (RAZORPAY) */}
+        {/* ------------------------------------------------------------------ */}
+        {checkoutModalOpen && (
+          <Modal onClose={closeCheckout} size="max-w-lg" ariaLabel="Buy and freight checkout">
+            <>
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag size={20} className="text-emerald-600" aria-hidden="true" />
+                  <h3 className="font-extrabold text-slate-800 text-base">Buy &amp; Freight Checkout</h3>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close checkout"
+                  onClick={closeCheckout}
+                  className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Body Content */}
+              <div className="p-6 overflow-y-auto flex flex-col gap-5">
+                {checkingConfig ? (
+                  <div className="py-12 text-center text-slate-500 flex flex-col items-center gap-2">
+                    <Loader2 size={24} className="animate-spin text-emerald-600" />
+                    <span className="text-xs font-semibold">Checking payment gateway setup...</span>
+                  </div>
+                ) : !paymentConfig.configured ? (
+                  <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-center flex flex-col items-center gap-3">
+                    <AlertCircle size={28} />
+                    <p className="text-xs font-semibold leading-relaxed">
+                      Payment gateway is not currently configured on the server. Please use <strong>Request to Source</strong> to negotiate directly with the seller.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setCheckoutModalOpen(false);
+                        handleOpenSourcingModal(activeProduct);
+                      }}
+                      className="px-4 py-2 bg-amber-700 text-white text-xs font-bold rounded-xl hover:bg-amber-800"
+                    >
+                      Switch to Request to Source
+                    </button>
+                  </div>
+                ) : activeProduct?.price === 0 || activeProduct?.pricingModel === 'Free — disposal saving' ? (
+                  <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-center flex flex-col items-center gap-3">
+                    <CheckCircle2 size={28} />
+                    <p className="text-xs font-semibold leading-relaxed">
+                      This waste stream is listed for free! Please use <strong>Request to Source</strong> to arrange pickup details with the seller.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setCheckoutModalOpen(false);
+                        handleOpenSourcingModal(activeProduct);
+                      }}
+                      className="px-4 py-2 bg-emerald-700 text-white text-xs font-bold rounded-xl hover:bg-emerald-800"
+                    >
+                      Request Free Pickup
+                    </button>
+                  </div>
+                ) : checkoutStage === 'paid' ? (
+                  /* Paid Success Screen */
+                  <div className="py-6 flex flex-col items-center justify-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                      <CheckCircle2 size={36} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-extrabold text-slate-800">Order & Freight Confirmed!</h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Your payment was processed and shipment booked with the logistics carrier.
+                      </p>
                     </div>
 
-                    <div className="card-meta-row">
-                      <div className="card-meta-item">
-                        <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 800 }}>Material Type</span>
-                        <span className="card-meta-right-val" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#374151' }}>
-                          {categoryIcon(item.category)}
-                          {item.category}
+                    {checkoutResult?.shipment?.waybillNumber && (
+                      <div className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs font-mono">
+                        <span className="text-slate-400 block font-bold text-[10px] uppercase font-sans">Waybill Number</span>
+                        <span className="text-emerald-700 font-extrabold text-sm">
+                          {checkoutResult.shipment.waybillNumber}
                         </span>
                       </div>
+                    )}
 
-                      <div className="card-meta-item">
-                        <MapPin size={12} />
-                        <span>{item.location.split(',').pop().trim()}</span>
-                        <span className="card-meta-right-val" style={{ fontSize: '11.5px', color: '#374151' }}>{item.quantity}</span>
-                      </div>
-                    </div>
-
-                    <div className="card-score-row">
-                      <div className="circular-score-wrapper" style={{ width: '36px', height: '36px' }}>
-                        <svg className="circular-score-svg" viewBox="0 0 36 36">
-                          <path className="circular-score-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                          <path className="circular-score-bar" strokeDasharray={`${item.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        </svg>
-                        <span className="circular-score-text" style={{ fontSize: '10.5px' }}>{item.score}%</span>
-                      </div>
-                      <span className="card-score-label">Compatibility Score</span>
-                      <span className={`listing-status-badge ${STATUS_STYLES[item.status]}`} style={{ marginLeft: 'auto' }}>{item.status}</span>
-                    </div>
-
-                    <div className="card-btn-group">
-                      <button
-                        className="btn-card-details"
-                        onClick={(e) => { e.stopPropagation(); openProduct(item); }}
-                      >
-                        View Details
-                      </button>
-                      <button
-                        className="btn-card-source"
-                        onClick={(e) => { e.stopPropagation(); triggerToast(`Sourcing request sent for "${item.title}"!`); }}
-                      >
-                        Request to Source
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setCheckoutModalOpen(false);
+                        setCurrentPage('orders');
+                      }}
+                      className="w-full py-3 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+                    >
+                      View Order & Track Shipment
+                    </button>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                ) : checkoutStage === 'failed' ? (
+                  /* Failure Screen */
+                  <div className="py-6 flex flex-col items-center justify-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+                      <AlertCircle size={36} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-extrabold text-slate-800">Payment Failed</h3>
+                      <p className="text-xs text-rose-600 mt-1 font-semibold">
+                        {checkoutError || 'The transaction could not be completed.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setCheckoutStage('idle')}
+                      className="px-6 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-900"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : (
+                  /* Checkout Quote & Payment Form */
+                  <form onSubmit={handleGetQuote} className="flex flex-col gap-4">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                      <span className="font-extrabold text-slate-800 block">{activeProduct.title}</span>
+                      <span className="text-slate-500">Unit Price: ₹{activeProduct.price} / {activeProduct.unit || 'kg'}</span>
+                    </div>
 
-        </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="checkout-qty" className="text-xs font-bold text-slate-700 block mb-1">
+                          Quantity <span className="font-medium text-slate-400">(max {activeProduct.quantity})</span>
+                        </label>
+                        <input
+                          id="checkout-qty"
+                          type="number"
+                          min="1"
+                          max={activeProduct.quantity}
+                          required
+                          value={checkoutQty}
+                          onChange={(e) => setCheckoutQty(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="checkout-pincode" className="text-xs font-bold text-slate-700 block mb-1">
+                          Destination Pincode
+                        </label>
+                        <input
+                          id="checkout-pincode"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          required
+                          placeholder="e.g. 411001"
+                          value={destinationPincode}
+                          onChange={(e) => setDestinationPincode(e.target.value.replace(/\D/g, ''))}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={quoteLoading}
+                      className="py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      {quoteLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                      Calculate Quote Breakdown
+                    </button>
+
+                    {quoteError && (
+                      <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-semibold">
+                        {quoteError}
+                      </div>
+                    )}
+
+                    {/* Breakdown display */}
+                    {quoteData && (
+                      <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex flex-col gap-3">
+                        <h4 className="text-xs font-extrabold text-emerald-900 uppercase tracking-wider">
+                          Price & Freight Breakdown
+                        </h4>
+                        <div className="space-y-1.5 text-xs text-slate-700">
+                          <div className="flex justify-between">
+                            <span>Material Cost ({quoteData.quantity} {activeProduct.unit || 'kg'}):</span>
+                            <span className="font-bold">{formatRupees(quoteData.breakdown.materialCost)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Freight / Delivery Charge:</span>
+                            <span className="font-bold">{formatRupees(quoteData.breakdown.freightCost)}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-500">
+                            <span>GST (18%):</span>
+                            <span>{formatRupees(quoteData.breakdown.gstAmount)}</span>
+                          </div>
+                          <div className="pt-2 border-t border-emerald-200 flex justify-between text-sm font-extrabold text-emerald-900">
+                            <span>Total Amount Payable:</span>
+                            <span>{formatRupees(quoteData.breakdown.total)}</span>
+                          </div>
+                        </div>
+
+                        {quoteData.deliveryEstimate && (
+                          <div className="text-[11px] text-emerald-800 pt-1">
+                            {/* The API field is `formattedEDD` / `estimatedDeliveryDate`.
+                                Reading `estimatedDate` rendered "Invalid Date". */}
+                            🚚 Est. Delivery:{' '}
+                            <strong>
+                              {quoteData.deliveryEstimate.formattedEDD
+                                || (quoteData.deliveryEstimate.estimatedDeliveryDate
+                                  ? new Date(quoteData.deliveryEstimate.estimatedDeliveryDate).toLocaleDateString('en-IN')
+                                  : 'To be confirmed')}
+                            </strong>{' '}
+                            to {quoteData.destination?.city || 'destination'}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleStartPayment}
+                          disabled={checkoutStage !== 'idle'}
+                          className="mt-2 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {checkoutStage !== 'idle' ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />
+                              <span>Processing ({checkoutStage})...</span>
+                            </>
+                          ) : (
+                            <>
+                              <IndianRupee size={16} /> Pay {formatRupees(quoteData.breakdown.total)} via Razorpay
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </form>
+                )}
+              </div>
+            </>
+          </Modal>
+        )}
+
         <Footer variant="compact" triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
       </main>
-
-      {/* ====================================================================
-         PRODUCT DETAIL MODAL — full core listing fields
-         ==================================================================== */}
-      {selectedProduct && (
-        <div className="product-modal-overlay" onClick={closeProduct}>
-          <div className="product-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="product-modal-header">
-              <div className="product-modal-heading">
-                <span className={`listing-status-badge ${STATUS_STYLES[selectedProduct.status]}`}>{selectedProduct.status}</span>
-                <h2 className="product-modal-title">{selectedProduct.title}</h2>
-              </div>
-              <button className="product-modal-close" aria-label="Close" onClick={closeProduct}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="product-modal-body">
-              {/* Left: gallery */}
-              <div className="product-modal-media">
-                <img src={selectedProduct.gallery[activeImage]} alt={selectedProduct.title} className="product-modal-main-img" />
-                <div className="product-modal-thumbs">
-                  {selectedProduct.gallery.map((src, i) => (
-                    <button
-                      key={i}
-                      className={`product-modal-thumb ${i === activeImage ? 'active' : ''}`}
-                      onClick={() => setActiveImage(i)}
-                    >
-                      <img src={src} alt={`view ${i + 1}`} />
-                    </button>
-                  ))}
-                </div>
-
-                {/* Source business */}
-                <div className="product-source-card">
-                  <div className="product-source-icon">
-                    <Building2 size={18} />
-                  </div>
-                  <div className="product-source-info">
-                    <span className="product-source-name">
-                      {selectedProduct.source}
-                      {selectedProduct.verified && <BadgeCheck size={15} className="product-verified-badge" />}
-                    </span>
-                    <span className="product-source-sub">
-                      {selectedProduct.verified ? 'Verified business' : 'Unverified — pending KYB'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: details */}
-              <div className="product-modal-details">
-                {/* Compatibility score */}
-                <div className="product-score-row">
-                  <div className="circular-score-wrapper" style={{ width: '44px', height: '44px' }}>
-                    <svg className="circular-score-svg" viewBox="0 0 36 36">
-                      <path className="circular-score-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path className="circular-score-bar" strokeDasharray={`${selectedProduct.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    </svg>
-                    <span className="circular-score-text" style={{ fontSize: '11px' }}>{selectedProduct.score}%</span>
-                  </div>
-                  <div>
-                    <span className="product-score-title">Compatibility Score</span>
-                    <span className="product-score-sub">Based on material, purity, volume & distance</span>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="product-desc-block">
-                  <span className="product-block-label">Description</span>
-                  <p className="product-desc-text">{selectedProduct.description}</p>
-                </div>
-
-                {/* Field grid */}
-                <div className="product-fields-grid">
-                  {detailFields(selectedProduct).map((f, i) => (
-                    <div key={i} className="product-field">
-                      <span className="product-field-label">{f.icon}{f.label}</span>
-                      <span className="product-field-value">{f.value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Actions */}
-                <div className="product-modal-actions">
-                  <button
-                    className="btn-card-source"
-                    onClick={() => { triggerToast(`Sourcing request sent for "${selectedProduct.title}"!`); closeProduct(); }}
-                  >
-                    Request to Source
-                  </button>
-                  <button
-                    className="btn-card-details"
-                    onClick={() => { closeProduct(); setCurrentPage('messages'); }}
-                  >
-                    Message Seller
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
 export default MarketplacePage;

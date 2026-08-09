@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Leaf, Target, Recycle, ShieldCheck, Users, Handshake, Sparkles,
   ArrowRight, Building2, MapPin, Layers, BookOpen

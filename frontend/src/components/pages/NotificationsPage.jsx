@@ -1,58 +1,132 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Recycle, MessageSquare, Package, CheckCircle2, Bell, Truck, CheckCheck
+  Package, CheckCircle2, Bell, Truck, CheckCheck, RefreshCw, Loader2
 } from 'lucide-react';
 import Sidebar from '../common/Sidebar';
 import Topnav from '../common/Topnav';
 import Footer from '../common/Footer';
+import {
+  apiGetReceivedSourcingRequests,
+  apiGetMyShipments,
+  apiGetMyOrders
+} from '../../lib/api';
 
+// `tone` used to be declared and then ignored, so every notification rendered in
+// the same emerald circle and the types were indistinguishable at a glance.
 const ICONS = {
-  match: { node: <Recycle size={18} />, tone: 'green' },
-  message: { node: <MessageSquare size={18} />, tone: 'purple' },
-  request: { node: <Package size={18} />, tone: 'amber' },
-  deal: { node: <CheckCircle2 size={18} />, tone: 'green' },
-  logistics: { node: <Truck size={18} />, tone: 'blue' },
-  system: { node: <Bell size={18} />, tone: 'gray' },
+  request: { node: <Package size={18} />, tone: 'bg-amber-100 text-amber-700' },
+  deal: { node: <CheckCircle2 size={18} />, tone: 'bg-emerald-100 text-emerald-700' },
+  logistics: { node: <Truck size={18} />, tone: 'bg-blue-100 text-blue-700' },
+  system: { node: <Bell size={18} />, tone: 'bg-slate-100 text-slate-600' },
 };
-
-const INITIAL = [
-  { id: 1, type: 'match', group: 'Today', title: 'New match found', body: 'BioSkins Skincare Co. is a 95% match for your Spent Coffee Grounds listing.', time: '12m ago', read: false, action: 'listingsDetails' },
-  { id: 2, type: 'request', group: 'Today', title: 'Sourcing request received', body: 'EcoInsulate Ltd. requested to source 350kg of your Recycled Textile Fabric.', time: '1h ago', read: false, action: 'messages' },
-  { id: 3, type: 'message', group: 'Today', title: 'New message', body: 'BioPack Solutions: "Yes, 10am at the side entrance works for pickup."', time: '3h ago', read: false, action: 'messages' },
-  { id: 4, type: 'deal', group: 'Earlier', title: 'Deal completed', body: 'Your deal with GreenFeed Farms for 800kg Brewery Grain was marked completed.', time: 'Yesterday', read: true, action: 'listingsDetails' },
-  { id: 5, type: 'logistics', group: 'Earlier', title: 'Pickup scheduled', body: 'Pickup for Wood Offcuts confirmed for Mon, 19 Aug, 11:00 AM.', time: '2 days ago', read: true, action: 'messages' },
-  { id: 6, type: 'system', group: 'Earlier', title: 'Profile verified', body: 'Your business has been verified. You now have a Verified badge.', time: '3 days ago', read: true, action: 'profile' },
-];
 
 const FILTERS = [
   { key: 'all', label: 'All' },
-  { key: 'match', label: 'Matches' },
   { key: 'request', label: 'Requests' },
-  { key: 'message', label: 'Messages' },
-  { key: 'system', label: 'System' },
+  { key: 'logistics', label: 'Shipments' },
+  { key: 'deal', label: 'Orders' },
 ];
 
 export const NotificationsPage = ({ currentPage, setCurrentPage, triggerToast }) => {
-  const [items, setItems] = useState(INITIAL);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  const unreadCount = items.filter(n => !n.read).length;
+  const fetchRealNotifications = async () => {
+    setLoading(true);
+    try {
+      const [reqRes, shipRes, ordRes] = await Promise.allSettled([
+        apiGetReceivedSourcingRequests(),
+        apiGetMyShipments(),
+        apiGetMyOrders()
+      ]);
 
-  const visible = items.filter(n => {
+      const items = [];
+
+      // 1. Sourcing Requests
+      if (reqRes.status === 'fulfilled' && reqRes.value?.requests) {
+        reqRes.value.requests.forEach((req) => {
+          items.push({
+            id: `req_${req._id}`,
+            type: 'request',
+            title: 'Sourcing request received',
+            body: `${req.buyer?.businessName || 'An upcycler'} requested to source ${req.quantityRequired}${req.unit} of "${req.title}".`,
+            time: new Date(req.createdAt).toLocaleDateString(),
+            timestamp: new Date(req.createdAt).getTime(),
+            action: 'listingsDetails',
+            read: req.status !== 'OPEN'
+          });
+        });
+      }
+
+      // 2. Shipments
+      if (shipRes.status === 'fulfilled' && shipRes.value?.shipments) {
+        shipRes.value.shipments.forEach((ship) => {
+          items.push({
+            id: `ship_${ship._id}`,
+            type: 'logistics',
+            title: `Shipment status: ${ship.status}`,
+            body: `Freight shipment #${ship.waybillNumber} is currently ${ship.status}.`,
+            time: new Date(ship.createdAt || Date.now()).toLocaleDateString(),
+            timestamp: new Date(ship.createdAt || Date.now()).getTime(),
+            action: 'orders',
+            read: true
+          });
+        });
+      }
+
+      // 3. Orders
+      if (ordRes.status === 'fulfilled' && ordRes.value) {
+        const purchases = ordRes.value.purchases || [];
+        const sales = ordRes.value.sales || [];
+        [...purchases, ...sales].forEach((ord) => {
+          if (ord.status === 'PAID') {
+            items.push({
+              id: `ord_${ord._id}`,
+              type: 'deal',
+              title: 'Paid order confirmed',
+              body: `Order for ${ord.quantity} ${ord.unit || 'kg'} of "${ord.productTitle || 'material'}" was confirmed.`,
+              time: new Date(ord.createdAt).toLocaleDateString(),
+              timestamp: new Date(ord.createdAt).getTime(),
+              action: 'orders',
+              read: true
+            });
+          }
+        });
+      }
+
+      // Sort newest first
+      items.sort((a, b) => b.timestamp - a.timestamp);
+      setNotifications(items);
+    } catch (err) {
+      console.warn('Notifications fetch error:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRealNotifications();
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const visible = notifications.filter((n) => {
     if (filter === 'all') return true;
-    if (filter === 'system') return n.type === 'system' || n.type === 'deal' || n.type === 'logistics';
-    return n.type === filter;
+    if (filter === 'request') return n.type === 'request';
+    if (filter === 'logistics') return n.type === 'logistics';
+    if (filter === 'deal') return n.type === 'deal';
+    return true;
   });
 
-  const groups = ['Today', 'Earlier'].map(g => ({ group: g, list: visible.filter(n => n.group === g) }));
-
   const markAllRead = () => {
-    setItems(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     triggerToast('All notifications marked as read.');
   };
 
   const openNotification = (n) => {
-    setItems(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
     if (n.action) setCurrentPage(n.action);
   };
 
@@ -63,25 +137,42 @@ export const NotificationsPage = ({ currentPage, setCurrentPage, triggerToast })
       <main className="inbox-main-content">
         <Topnav triggerToast={triggerToast} setCurrentPage={setCurrentPage} />
 
-        <div className="inbox-view-container" style={{ overflowY: 'auto' }}>
+        <div className="inbox-view-container">
           {/* Header */}
-          <div className="dash-header">
+          <div className="dash-header flex items-center justify-between">
             <div>
-              <h1 className="inbox-view-title" style={{ marginBottom: '4px' }}>Notifications</h1>
+              <h1 className="inbox-view-title mb-1">Notifications</h1>
               <p className="dash-subtitle">
-                {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}.` : 'You\'re all caught up.'}
+                {unreadCount > 0 ? `You have ${unreadCount} unread update${unreadCount > 1 ? 's' : ''}.` : 'You\'re all caught up.'}
               </p>
             </div>
-            <button className="notif-markall-btn" onClick={markAllRead} disabled={unreadCount === 0}>
-              <CheckCheck size={16} /> Mark all as read
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={fetchRealNotifications}
+                type="button"
+                aria-label="Refresh notifications"
+                disabled={loading}
+                className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              </button>
+              <button
+                onClick={markAllRead}
+                disabled={unreadCount === 0}
+                className="notif-markall-btn"
+              >
+                <CheckCheck size={16} /> Mark all read
+              </button>
+            </div>
           </div>
 
-          {/* Filter tabs */}
-          <div className="notif-filters">
-            {FILTERS.map(f => (
+          {/* Filters */}
+          <div className="notif-filters mb-4">
+            {FILTERS.map((f) => (
               <button
                 key={f.key}
+                type="button"
+                aria-pressed={filter === f.key}
                 className={`notif-filter-chip ${filter === f.key ? 'active' : ''}`}
                 onClick={() => setFilter(f.key)}
               >
@@ -91,39 +182,47 @@ export const NotificationsPage = ({ currentPage, setCurrentPage, triggerToast })
           </div>
 
           {/* List */}
-          <div className="notif-card">
-            {visible.length === 0 ? (
-              <div className="notif-empty">
-                <Bell size={28} />
-                <span>No notifications here.</span>
+          <div className="bg-white rounded-3xl border border-slate-200 p-4 shadow-sm mb-8">
+            {loading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                <Loader2 size={24} className="animate-spin text-emerald-600" />
+                <span className="text-xs font-semibold">Loading notification feed...</span>
               </div>
-            ) : groups.map(({ group, list }) => (
-              list.length > 0 && (
-                <div key={group} className="notif-group">
-                  <div className="notif-group-label">{group}</div>
-                  {list.map(n => {
-                    const ic = ICONS[n.type] || ICONS.system;
-                    return (
-                      <button
-                        key={n.id}
-                        className={`notif-item ${n.read ? '' : 'unread'}`}
-                        onClick={() => openNotification(n)}
-                      >
-                        <div className={`notif-icon ${ic.tone}`}>{ic.node}</div>
-                        <div className="notif-content">
-                          <div className="notif-title-row">
-                            <span className="notif-title">{n.title}</span>
-                            <span className="notif-time">{n.time}</span>
-                          </div>
-                          <p className="notif-body">{n.body}</p>
+            ) : visible.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
+                <Bell size={28} className="text-slate-400" />
+                <span className="text-sm font-semibold">No notifications in your feed yet.</span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {visible.map((n) => {
+                  const iconObj = ICONS[n.type] || ICONS.system;
+                  return (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => openNotification(n)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-4 ${
+                        n.read
+                          ? 'bg-white border-slate-100 hover:border-slate-200'
+                          : 'bg-emerald-50/50 border-emerald-200 font-semibold'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconObj.tone}`} aria-hidden="true">
+                        {iconObj.node}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-extrabold text-slate-800">{n.title}</h4>
+                          <span className="text-[10px] text-slate-400">{n.time}</span>
                         </div>
-                        {!n.read && <span className="notif-unread-dot" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )
-            ))}
+                        <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{n.body}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -132,4 +231,5 @@ export const NotificationsPage = ({ currentPage, setCurrentPage, triggerToast })
     </div>
   );
 };
+
 export default NotificationsPage;

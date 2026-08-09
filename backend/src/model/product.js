@@ -45,11 +45,34 @@ const productSchema = mongoose.Schema({
     price: { type: Number, default: 0, min: 0 },
     priceUnit: {
         type: String,
-        
+
         default: 'per kg'
     },
+    // The create-listing form has always collected these; without them the values
+    // were dropped on save and the marketplace showed hardcoded placeholders.
+    pricingModel: {
+        type: String,
+        enum: ['Fixed', 'Negotiable', 'Free — disposal saving'],
+        default: 'Negotiable'
+    },
+    moisture: {
+        type: String,
+        enum: ['Dry', 'Wet', 'Mixed', 'Clean / Sorted', 'Contaminated'],
+        default: 'Dry'
+    },
+    availableFrom: { type: Date, default: null },
+    logistics: {
+        type: String,
+        enum: ['Local Pickup', 'Freight (supplier-arranged)', 'Courier', 'Buyer-arranged'],
+        default: 'Local Pickup'
+    },
+    packaging: {
+        type: String,
+        enum: ['Loose / bulk', 'Bagged', 'Palletised', 'Container'],
+        default: 'Bagged'
+    },
 
-    
+
     city: {
         type: String,
         required: true,

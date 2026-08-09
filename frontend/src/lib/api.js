@@ -142,10 +142,19 @@ export const apiVerifyEmailChange = (token) =>
   request(`/user/verify-email-change?token=${encodeURIComponent(token)}`, { auth: false });
 
 /* ---- Products / Marketplace ---- */
-export const apiGetProducts = (params = {}) => {
-  const query = new URLSearchParams(params).toString();
-  return request(`/product${query ? `?${query}` : ''}`, { auth: false });
+// Drops empty values so `?category=&city=` never reaches the backend as a filter.
+const toQuery = (params = {}) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    search.append(key, value);
+  });
+  const query = search.toString();
+  return query ? `?${query}` : '';
 };
+
+export const apiGetProducts = (params = {}) =>
+  request(`/product${toQuery(params)}`, { auth: false });
 
 export const apiGetMyProducts = () => request('/product/my-products', { auth: true });
 
@@ -161,13 +170,15 @@ export const apiDeleteProduct = (id) =>
   request(`/product/${id}`, { method: 'DELETE', auth: true });
 
 /* ---- Sourcing Requests ---- */
-export const apiGetSourcingRequests = (params = {}) => {
-  const query = new URLSearchParams(params).toString();
-  return request(`/sourcing-requests${query ? `?${query}` : ''}`, { auth: false });
-};
+export const apiGetSourcingRequests = (params = {}) =>
+  request(`/sourcing-requests${toQuery(params)}`, { auth: false });
 
 export const apiGetMySourcingRequests = () =>
   request('/sourcing-requests/my-requests', { auth: true });
+
+/** Requests other buyers have raised against MY listings. */
+export const apiGetReceivedSourcingRequests = () =>
+  request('/sourcing-requests/received', { auth: true });
 
 export const apiGetSourcingRequestById = (id) =>
   request(`/sourcing-requests/${id}`, { auth: false });
@@ -210,6 +221,51 @@ export const apiUploadImages = (files) => {
   const formData = new FormData();
   Array.from(files).forEach((file) => formData.append('images', file));
   return requestFormData('/upload/images', formData, { auth: true });
+};
+
+/* ---- Payments (Razorpay) ---------------------------------------------------
+   The browser never sends an amount. It sends what it is buying — listing,
+   quantity, destination pincode — and the server prices it from the database.
+   -------------------------------------------------------------------------- */
+
+/** Whether the server has Razorpay keys, plus the publishable key id. */
+export const apiGetPaymentConfig = () => request('/payment/config', { auth: false });
+
+/** Price breakdown to show before the buyer commits. */
+export const apiGetPaymentQuote = (payload) =>
+  request('/payment/quote', { method: 'POST', body: payload, auth: true });
+
+/** Creates the Razorpay order to hand to checkout. */
+export const apiCreatePaymentOrder = (payload) =>
+  request('/payment/order', { method: 'POST', body: payload, auth: true });
+
+/** Sends the checkout callback back for signature verification. Never trust the
+    browser's word that a payment succeeded — this is what makes it official. */
+export const apiVerifyPayment = (payload) =>
+  request('/payment/verify', { method: 'POST', body: payload, auth: true });
+
+export const apiMarkPaymentFailed = (razorpayOrderId, reason) =>
+  request('/payment/failed', {
+    method: 'POST',
+    body: { razorpay_order_id: razorpayOrderId, reason },
+    auth: true,
+  });
+
+export const apiGetMyOrders = () => request('/payment/my-orders', { auth: true });
+
+/* ---- Display helpers ---- */
+
+/**
+ * The backend stores roles prefixed — 'ROLE_SELLER' / 'ROLE_BUYER' / 'ROLE_ADMIN'.
+ * Rendering `user.role` straight out of the API showed users "ROLE_SELLER".
+ */
+export const roleLabel = (role) => {
+  switch (role) {
+    case 'ROLE_SELLER': return 'Generator';
+    case 'ROLE_BUYER': return 'Upcycler';
+    case 'ROLE_ADMIN': return 'Admin';
+    default: return 'Member';
+  }
 };
 
 export const logout = () => clearToken();

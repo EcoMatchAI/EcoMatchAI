@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   ClipboardCheck, CheckSquare, Compass, User, ClipboardList, Handshake,
   AlertTriangle, LogOut, RefreshCw, Mail

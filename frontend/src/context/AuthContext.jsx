@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect } from 'react';
 import {
   getToken, setToken, clearToken, isLoggedIn,
   getPendingEmail, setPendingEmail,
@@ -39,7 +39,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Restores the session from the stored token on first mount; writing user
+    // and loading state is exactly what this call is for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshUser();
+     
   }, []);
 
   const handleLogin = async (email, password) => {
@@ -121,14 +125,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
 
 export default AuthContext;

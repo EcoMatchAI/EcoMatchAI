@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Leaf, UploadCloud, Cpu, Share2, Truck, Target, Bell, Route, ShieldCheck } from 'lucide-react';
 

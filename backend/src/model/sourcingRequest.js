@@ -6,6 +6,19 @@ const sourcingRequestSchema = new mongoose.Schema({
         ref: 'user',
         required: true
     },
+    // Set when the request is raised against a specific marketplace listing.
+    // `seller` is denormalised from the product so a seller can list the requests
+    // addressed to them without a join. Both stay null for open/broadcast requests.
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'product',
+        default: null
+    },
+    seller: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        default: null
+    },
     title: {
         type: String,
         required: true,

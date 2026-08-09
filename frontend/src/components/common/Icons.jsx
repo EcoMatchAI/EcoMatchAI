@@ -1,4 +1,3 @@
-import React from 'react';
 
 // ============================================================================
 // SIGN IN / SIGN UP LOGO & BRAND ICON
