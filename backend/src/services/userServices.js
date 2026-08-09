@@ -138,20 +138,36 @@ class UserServices {
             addressId = newAddress._id;
         }
 
-        userRecord.phoneNumber = profileData.phoneNumber;
-        userRecord.GSTIN = profileData.GSTIN;
-        userRecord.bankDetails = profileData.bankDetails;
-        userRecord.IMPORT_EXPORT_Code = profileData.IMPORT_EXPORT_Code;
-        userRecord.preferredPortAndAirport = profileData.preferredPortAndAirport;
-        userRecord.FieldOfInterest = profileData.FieldOfInterest;
+        // Only overwrite what the request actually sent. Assigning undefined wiped
+        // out values the user had already saved when they revisited this step.
+        const assignIfPresent = (field) => {
+            if (profileData[field] !== undefined) userRecord[field] = profileData[field];
+        };
+        [
+            'phoneNumber', 'GSTIN', 'bankDetails', 'IMPORT_EXPORT_Code',
+            'preferredPortAndAirport', 'FieldOfInterest',
+            'businessTypes', 'businessDetails', 'generatorInfo', 'upcyclerInfo', 'materials'
+        ].forEach(assignIfPresent);
+
         userRecord.role = profileData.role;
+
+        // The questionnaire asks for the operating city / GST separately from the
+        // top-level fields; keep them in sync so the profile page shows one truth.
+        if (profileData.businessDetails?.gstNumber && !userRecord.GSTIN) {
+            userRecord.GSTIN = profileData.businessDetails.gstNumber;
+        }
         if (addressId) userRecord.address.push(addressId);
 
         userRecord.accountStatus = accountStatus.ACTIVE;
         await userRecord.save();
 
         const authToken = jwtProvider.createJwt({ email: userRecord.email, role: userRecord.role });
-        return { user: userRecord, authToken };
+
+        // userRecord was loaded without .select('-password'), so returning it raw
+        // shipped the bcrypt hash to the client on every signup.
+        const safeUser = userRecord.toObject();
+        delete safeUser.password;
+        return { user: safeUser, authToken };
     }
 
     async getUserProfile(jwt) {
@@ -186,11 +202,31 @@ class UserServices {
         // role / accountStatus / isEmailVerified / password in the request body.
         const EDITABLE = [
             'businessName', 'phoneNumber', 'GSTIN', 'IMPORT_EXPORT_Code',
-            'preferredPortAndAirport', 'FieldOfInterest', 'bankDetails'
+            'preferredPortAndAirport', 'FieldOfInterest', 'bankDetails',
+            'businessTypes', 'businessDetails', 'generatorInfo', 'upcyclerInfo', 'materials'
         ];
         const updates = {};
         for (const field of EDITABLE) {
             if (newUserData[field] !== undefined) updates[field] = newUserData[field];
+        }
+
+        // `role` is deliberately NOT in EDITABLE — a free-text role would let a
+        // user make themselves ADMIN. But switching between the two self-service
+        // roles is legitimate (the preferences screen offers it), so allow exactly
+        // those two and nothing else.
+        //
+        // The stored values are prefixed ('ROLE_SELLER'), while the client sends the
+        // bare name ('SELLER') — the same normalisation completeProfile does.
+        if (newUserData.role !== undefined) {
+            const normalized = newUserData.role === 'SELLER' ? UserRoles.SELLER
+                : newUserData.role === 'BUYER' ? UserRoles.BUYER
+                : newUserData.role;
+
+            const selfAssignable = [UserRoles.BUYER, UserRoles.SELLER];
+            if (!selfAssignable.includes(normalized)) {
+                throw new Error('Invalid role. Allowed roles: BUYER, SELLER');
+            }
+            updates.role = normalized;
         }
 
         const updatedUser = await User.findByIdAndUpdate(existingUser._id, updates, {

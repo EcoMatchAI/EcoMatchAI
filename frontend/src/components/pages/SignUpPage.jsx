@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Recycle, User } from 'lucide-react';
 import {
   BackgroundWaves, SignInLogo, DotGrid, FactoryIllustration, GoogleIcon,
   LinkedInIcon, WindTurbineIllustration
 } from '../common/Icons';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export const SignUpPage = ({ setCurrentPage, triggerToast }) => {
   const { signup } = useAuth();

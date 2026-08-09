@@ -117,7 +117,7 @@ async updateShipmentStatus(waybillNumber, { status, location, remarks }, userId)
     /**
      * Calculate Freight Cost DIRECTLY FROM PRODUCT WEIGHT (quantity)
      */
-    async estimateFreightAndDelivery({ productId, destinationPincode }) {
+    async estimateFreightAndDelivery({ productId, destinationPincode, quantity }) {
         if (!productId || !destinationPincode) {
             throw new Error('productId and destinationPincode are required.');
         }
@@ -127,10 +127,23 @@ async updateShipmentStatus(waybillNumber, { status, location, remarks }, userId)
             throw new Error('Product not found.');
         }
 
-        // Convert product quantity to Weight in KG
-        let weightInKg = product.quantity || 100;
+        // Buyers can take part of a lot. `quantity` is optional and falls back to the
+        // whole listing, so existing callers get the same numbers as before.
+        let orderedQuantity = product.quantity;
+        if (quantity !== undefined && quantity !== null && quantity !== '') {
+            orderedQuantity = Number(quantity);
+            if (!Number.isFinite(orderedQuantity) || orderedQuantity <= 0) {
+                throw new Error('Quantity must be a positive number.');
+            }
+            if (orderedQuantity > product.quantity) {
+                throw new Error(`Only ${product.quantity} ${product.unit || 'kg'} is available in this listing.`);
+            }
+        }
+
+        // Convert ordered quantity to Weight in KG
+        let weightInKg = orderedQuantity || 100;
         if (product.unit && product.unit.toLowerCase().includes('ton')) {
-            weightInKg = product.quantity * 1000; // Convert Tons to KG
+            weightInKg = orderedQuantity * 1000; // Convert Tons to KG
         }
 
         // Tiered rate calculation based strictly on weight
@@ -154,8 +167,11 @@ async updateShipmentStatus(waybillNumber, { status, location, remarks }, userId)
             product: {
                 id: product._id,
                 title: product.title,
-                quantity: product.quantity,
+                quantity: orderedQuantity,
+                availableQuantity: product.quantity,
                 unit: product.unit,
+                price: product.price,
+                priceUnit: product.priceUnit,
                 weightInKg,
                 originCity: product.city
             },
@@ -183,9 +199,13 @@ async updateShipmentStatus(waybillNumber, { status, location, remarks }, userId)
     /**
      * Book Shipment & Generate Waybill
      */
-    async createShipment({ productId, buyerId, destinationPincode }) {
-        const estimate = await this.estimateFreightAndDelivery({ productId, destinationPincode });
+    async createShipment({ productId, buyerId, destinationPincode, quantity }) {
+        const estimate = await this.estimateFreightAndDelivery({ productId, destinationPincode, quantity });
         const product = await Product.findById(productId);
+
+        if (product.seller.toString() === buyerId.toString()) {
+            throw new Error('You cannot book a shipment for your own listing.');
+        }
 
         const waybillNumber = `ECO-FRT-${Date.now()}`;
 

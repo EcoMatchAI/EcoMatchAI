@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { CheckCircle2, ShieldCheck, Loader2, MailCheck, Recycle, KeyRound } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { apiResendSignupOtp } from '../../lib/api';
 
 const wrap = {
@@ -50,8 +50,10 @@ export const VerifyEmailPage = ({ setCurrentPage, triggerToast }) => {
   useEffect(() => {
     if (!email) {
       const stored = getPendingEmail() || user?.email;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored) setEmail(stored);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleVerifySubmit = async (e) => {

@@ -50,6 +50,23 @@ class SourcingController {
         }
     }
 
+    /** GET /api/sourcing-requests/received — requests raised against my listings. */
+    async getReceivedRequests(req, res) {
+        try {
+            const requests = await sourcingService.getSellerRequests(req.user._id);
+            res.status(200).json({
+                success: true,
+                count: requests.length,
+                requests
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
     async getRequestById(req, res) {
         try {
             const request = await sourcingService.getRequestById(req.params.id);

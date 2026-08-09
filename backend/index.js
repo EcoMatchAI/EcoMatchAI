@@ -15,7 +15,6 @@ const productRoutes = require('./src/routes/productRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
 const sourcingRoutes = require('./src/routes/sourcingRequestRoutes');
 const logisticsRoutes = require('./src/routes/shipmentRoutes');
-const chatRoutes = require('./src/routes/chatRoutes');
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
@@ -25,7 +24,6 @@ app.use('/api/product', productRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/sourcing-requests', sourcingRoutes);
 app.use('/api/logistics', logisticsRoutes);
-app.use('/api/chat', chatRoutes);
 
 // Unknown route -> JSON, not Express's HTML error page (the frontend parses JSON).
 app.use((req, res) => {

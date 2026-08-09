@@ -8,6 +8,7 @@ router.get('/', sourcingController.getAllRequests);
 // `/my-requests` must be declared BEFORE `/:id`, otherwise Express matches it as an
 // id and Mongo throws: Cast to ObjectId failed for value "my-requests".
 router.get('/my-requests', authenticate, sourcingController.getMyRequests);
+router.get('/received', authenticate, sourcingController.getReceivedRequests);
 
 router.get('/:id', sourcingController.getRequestById);
 

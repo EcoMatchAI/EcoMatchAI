@@ -646,9 +646,16 @@
   @apply w-8 h-8 rounded-full object-cover;
 }
 
-/* Scrollable Inner Panel */
+/* Scrollable Inner Panel.
+   This file is NOT wrapped in an @layer, so its rules outrank every Tailwind
+   utility (unlayered styles beat layered ones regardless of source order).
+   That meant `overflow-hidden` here silently won over the `overflow-y-auto`
+   utility the pages add, and no dashboard page could scroll. Scrolling now
+   lives here, in the one place that owns this region.
+   `min-h-0` is required: a flex child defaults to min-height:auto and refuses
+   to shrink below its content, which would push the overflow outside the box. */
 .inbox-view-container {
-  @apply flex-1 flex flex-col p-6 overflow-hidden;
+  @apply flex-1 min-h-0 flex flex-col p-6 overflow-y-auto;
 }
 
 .inbox-view-title {

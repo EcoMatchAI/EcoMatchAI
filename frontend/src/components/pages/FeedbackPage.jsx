@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Star, Send, Lightbulb, Bug, Heart, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Star, Lightbulb, Bug, Heart, Sparkles, Mail } from 'lucide-react';
 import PublicNav from '../common/PublicNav';
 import Footer from '../common/Footer';
 
@@ -9,12 +9,13 @@ const TYPES = [
   { id: 'praise', label: 'Praise', icon: <Heart size={18} /> },
 ];
 
-const AREAS = ['General', 'Marketplace', 'Listings', 'Messaging', 'Matching', 'Account & Billing'];
+const AREAS = ['General', 'Marketplace', 'Listings', 'Logistics & Orders', 'Account & Preferences'];
+
+const SUPPORT_EMAIL = 'support@ecomatch.ai';
 
 export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
   const [type, setType] = useState('suggestion');
   const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
   const [area, setArea] = useState('General');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
@@ -22,15 +23,13 @@ export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!message.trim()) {
-      triggerToast('Please write a little about your feedback first.', 'error');
+      triggerToast('Please write your feedback message first.', 'error');
       return;
     }
-    setType('suggestion');
-    setRating(0);
-    setArea('General');
-    setMessage('');
-    setEmail('');
-    triggerToast('Thanks for your feedback! Our team will review it shortly.');
+    const subject = `EcoMatch Feedback [${type.toUpperCase()}] - ${area}`;
+    const body = `Type: ${type}\nArea: ${area}\nRating: ${rating}/5\nContact Email: ${email || 'Not provided'}\n\nFeedback:\n${message}`;
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    triggerToast('Opening email application to submit feedback...');
   };
 
   return (
@@ -47,12 +46,11 @@ export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
             Share your feedback
           </h1>
           <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-[640px]">
-            Your input shapes EcoMatch. Tell us what's working, what's not, or what you'd love to see next.
+            Your input shapes EcoMatch. Send suggestions, issues, or feedback directly to our core engineering team.
           </p>
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-6 lg:gap-8 items-start">
-          {/* Intro / reassurance column */}
           <div className="flex flex-col gap-4">
             {[
               { icon: <Lightbulb size={20} />, title: 'Suggest improvements', desc: 'Ideas for new features or better workflows.' },
@@ -71,12 +69,10 @@ export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
             ))}
           </div>
 
-          {/* Feedback form */}
           <form
             onSubmit={handleSubmit}
             className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-6 sm:p-8 flex flex-col gap-6"
           >
-            {/* Type */}
             <div className="flex flex-col gap-2.5">
               <label className="text-sm font-bold text-slate-700">What kind of feedback is this?</label>
               <div className="grid grid-cols-3 gap-2.5">
@@ -98,35 +94,44 @@ export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
               </div>
             </div>
 
-            {/* Rating */}
+            {/* Rating and contact email are both written into the email body, but
+                had no controls — so every submission reported "0/5" and
+                "Not provided" no matter what the sender meant. */}
             <div className="flex flex-col gap-2.5">
-              <label className="text-sm font-bold text-slate-700">How would you rate your experience?</label>
-              <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-slate-700">How would you rate your experience?</span>
+              <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Experience rating">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
                     key={n}
                     type="button"
-                    aria-label={`Rate ${n} star${n > 1 ? 's' : ''}`}
+                    role="radio"
+                    aria-checked={rating === n}
+                    aria-label={`${n} star${n > 1 ? 's' : ''}`}
                     onClick={() => setRating(n)}
-                    onMouseEnter={() => setHoverRating(n)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    className={`p-1 transition-colors duration-150 ${
-                      n <= (hoverRating || rating) ? 'text-amber-400' : 'text-slate-300'
-                    }`}
+                    className={`p-1 transition-colors duration-150 ${n <= rating ? 'text-amber-400' : 'text-slate-300 hover:text-amber-200'}`}
                   >
-                    <Star size={28} fill={n <= (hoverRating || rating) ? 'currentColor' : 'none'} />
+                    <Star size={26} fill={n <= rating ? 'currentColor' : 'none'} />
                   </button>
                 ))}
+                {rating > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setRating(0)}
+                    className="ml-2 text-[11px] font-bold text-slate-400 hover:text-slate-600 underline"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Area */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700">Which area is this about?</label>
+              <label htmlFor="fb-area" className="text-sm font-bold text-slate-700">Area</label>
               <select
+                id="fb-area"
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                className="w-full rounded-xl border-[1.5px] border-slate-200 px-4 py-3 text-[15px] text-slate-800 outline-none cursor-pointer transition-all duration-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold bg-white"
               >
                 {AREAS.map((a) => (
                   <option key={a} value={a}>{a}</option>
@@ -134,35 +139,40 @@ export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
               </select>
             </div>
 
-            {/* Message */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700">Your feedback <span className="text-rose-500">*</span></label>
+              <label htmlFor="fb-message" className="text-sm font-bold text-slate-700">
+                Your Feedback <span className="text-rose-500">*</span>
+              </label>
               <textarea
-                rows={5}
-                className="w-full rounded-xl border-[1.5px] border-slate-200 px-4 py-3 text-[15px] text-slate-800 outline-none resize-y transition-all duration-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-                placeholder="Tell us what's on your mind..."
+                id="fb-message"
+                rows={4}
+                required
+                placeholder="Write your feedback..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm"
               />
             </div>
 
-            {/* Email */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700">Email <span className="font-medium text-slate-400">(optional — if you'd like a reply)</span></label>
+              <label htmlFor="fb-email" className="text-sm font-bold text-slate-700">
+                Email <span className="font-medium text-slate-400">(optional — if you&rsquo;d like a reply)</span>
+              </label>
               <input
+                id="fb-email"
                 type="email"
-                className="w-full rounded-xl border-[1.5px] border-slate-200 px-4 py-3 text-[15px] text-slate-800 outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
               />
             </div>
 
             <button
               type="submit"
-              className="inline-flex items-center justify-center gap-2 bg-[#059669] hover:bg-[#047857] text-white text-sm font-bold rounded-xl px-6 py-3.5 transition-colors shadow-sm"
+              className="py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              <Send size={16} /> Submit Feedback
+              <Mail size={16} /> Send via Email ({SUPPORT_EMAIL})
             </button>
           </form>
         </section>
@@ -172,4 +182,5 @@ export const FeedbackPage = ({ currentPage, setCurrentPage, triggerToast }) => {
     </div>
   );
 };
+
 export default FeedbackPage;

@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  LayoutDashboard, ShoppingBag, ChevronDown, FileText, Recycle, Sparkles,
-  Network, BarChart2, MessageSquare, Bell, Settings 
+import { useState, useEffect, useRef } from 'react';
+import {
+  LayoutDashboard, ShoppingBag, ChevronDown, FileText,
+  MessageSquare, Bell, Settings, Package
 } from 'lucide-react';
 import { SignInLogo } from './Icons';
 import avatarImg from '../../assets/avatar.png';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
+import { roleLabel } from '../../lib/api';
 
-export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
+export const Sidebar = ({ currentPage, setCurrentPage }) => {
   const { user } = useAuth();
   const [isScrolling, setIsScrolling] = useState(false);
   const navRef = useRef(null);
@@ -41,7 +42,7 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
 
   return (
     <aside className="inbox-sidebar-left">
-      <div className="inbox-brand-area">
+      <div className="inbox-brand-area cursor-pointer" onClick={() => setCurrentPage('listsource')}>
         <div className="inbox-brand-logo">
           <SignInLogo size={32} color="#4ADE80" />
         </div>
@@ -55,6 +56,7 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
         <a
           href="#dashboard"
           className={`inbox-nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+          aria-current={currentPage === 'dashboard' ? 'page' : undefined}
           onClick={(e) => { e.preventDefault(); setCurrentPage('dashboard'); }}
         >
           <div className="inbox-nav-item-left">
@@ -64,87 +66,59 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
         </a>
 
         <div>
-          <a 
-            href="#marketplace" 
+          <a
+            href="#marketplace"
             className={`inbox-nav-item ${currentPage === 'marketplace' ? 'active' : ''}`}
+          aria-current={currentPage === 'marketplace' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); setCurrentPage('marketplace'); }}
           >
             <div className="inbox-nav-item-left">
               <ShoppingBag className="inbox-nav-icon" />
               Waste Marketplace
             </div>
-            <ChevronDown size={14} style={{ transform: currentPage === 'marketplace' ? 'rotate(180deg)' : 'none', color: '#FFFFFF' }} />
           </a>
-          {currentPage === 'marketplace' && (
-            <div style={{ paddingLeft: '38px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <a href="#browse" style={{ textDecoration: 'none', fontSize: '13px', fontWeight: '750', color: '#4ADE80', cursor: 'pointer' }} onClick={(e) => { e.preventDefault(); triggerToast('Browsing materials...'); }}>Browse Materials</a>
-              <a href="#saved" style={{ textDecoration: 'none', fontSize: '13px', fontWeight: '600', color: '#86B3A9', cursor: 'pointer' }} onClick={(e) => { e.preventDefault(); triggerToast('Saved searches...'); }}>Saved Searches</a>
-            </div>
-          )}
         </div>
 
-        <a 
-          href="#listings" 
+        <a
+          href="#listings"
           className={`inbox-nav-item ${currentPage === 'listingsDetails' ? 'active' : ''}`}
+          aria-current={currentPage === 'listingsDetails' ? 'page' : undefined}
           onClick={(e) => { e.preventDefault(); setCurrentPage('listingsDetails'); }}
         >
           <div className="inbox-nav-item-left">
             <FileText className="inbox-nav-icon" />
             My Listings
           </div>
-          <ChevronDown size={14} style={{ transform: currentPage === 'listingsDetails' ? 'rotate(180deg)' : 'none', color: '#FFFFFF' }} />
         </a>
 
-        <a href="#matches" className="inbox-nav-item" onClick={(e) => { e.preventDefault(); triggerToast('Opening Matches...'); }}>
+        <a
+          href="#orders"
+          className={`inbox-nav-item ${currentPage === 'orders' ? 'active' : ''}`}
+          aria-current={currentPage === 'orders' ? 'page' : undefined}
+          onClick={(e) => { e.preventDefault(); setCurrentPage('orders'); }}
+        >
           <div className="inbox-nav-item-left">
-            <Recycle className="inbox-nav-icon" />
-            Matches
+            <Package className="inbox-nav-icon" />
+            Orders & Shipments
           </div>
         </a>
 
-        <a href="#recommendations" className="inbox-nav-item" onClick={(e) => { e.preventDefault(); triggerToast('Opening AI Recommendations...'); }}>
-          <div className="inbox-nav-item-left">
-            <Sparkles className="inbox-nav-icon" />
-            AI Recommendations
-          </div>
-        </a>
-
-        <a href="#network" className="inbox-nav-item" onClick={(e) => { e.preventDefault(); triggerToast('Opening Network...'); }}>
-          <div className="inbox-nav-item-left">
-            <Network className="inbox-nav-icon" />
-            Network
-          </div>
-        </a>
-
-        <a href="#analytics" className="inbox-nav-item" onClick={(e) => { e.preventDefault(); triggerToast('Opening Analytics...'); }}>
-          <div className="inbox-nav-item-left">
-            <BarChart2 className="inbox-nav-icon" />
-            Analytics
-          </div>
-        </a>
-
-        <a href="#contracts" className="inbox-nav-item" onClick={(e) => { e.preventDefault(); triggerToast('Opening Contracts...'); }}>
-          <div className="inbox-nav-item-left">
-            <FileText className="inbox-nav-icon" />
-            Contracts
-          </div>
-        </a>
-
-        <a 
-          href="#messages" 
+        <a
+          href="#messages"
           className={`inbox-nav-item ${currentPage === 'messages' ? 'active' : ''}`}
+          aria-current={currentPage === 'messages' ? 'page' : undefined}
           onClick={(e) => { e.preventDefault(); setCurrentPage('messages'); }}
         >
           <div className="inbox-nav-item-left">
             <MessageSquare className="inbox-nav-icon" />
-            Messages
+            Communications
           </div>
-          <ChevronDown size={14} style={{ transform: currentPage === 'messages' ? 'rotate(180deg)' : 'none', color: '#FFFFFF' }} />
         </a>
 
         <a
           href="#notifications"
           className={`inbox-nav-item ${currentPage === 'notifications' ? 'active' : ''}`}
+          aria-current={currentPage === 'notifications' ? 'page' : undefined}
           onClick={(e) => { e.preventDefault(); setCurrentPage('notifications'); }}
         >
           <div className="inbox-nav-item-left">
@@ -153,10 +127,15 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
           </div>
         </a>
 
-        <a href="#settings" className="inbox-nav-item" onClick={(e) => { e.preventDefault(); triggerToast('Opening Settings...'); }}>
+        <a
+          href="#preferences"
+          className={`inbox-nav-item ${currentPage === 'preferences' ? 'active' : ''}`}
+          aria-current={currentPage === 'preferences' ? 'page' : undefined}
+          onClick={(e) => { e.preventDefault(); setCurrentPage('preferences'); }}
+        >
           <div className="inbox-nav-item-left">
             <Settings className="inbox-nav-icon" />
-            Settings
+            Account Settings
           </div>
         </a>
       </nav>
@@ -173,7 +152,7 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
           </div>
           <div className="inbox-profile-info">
             <span className="inbox-profile-name">{user?.businessName || 'Business Account'}</span>
-            <span className="inbox-profile-role">{user?.role || 'Member'}</span>
+            <span className="inbox-profile-role">{roleLabel(user?.role)}</span>
           </div>
         </div>
         <ChevronDown size={14} style={{ color: '#86B3A9' }} />
@@ -181,4 +160,5 @@ export const Sidebar = ({ currentPage, setCurrentPage, triggerToast }) => {
     </aside>
   );
 };
+
 export default Sidebar;

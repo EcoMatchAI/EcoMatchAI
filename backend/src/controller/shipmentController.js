@@ -6,8 +6,8 @@ class LogisticsController {
      */
     async estimateCostAndEDD(req, res) {
         try {
-            const { productId, destinationPincode } = req.body;
-            const result = await logisticsService.estimateFreightAndDelivery({ productId, destinationPincode });
+            const { productId, destinationPincode, quantity } = req.body;
+            const result = await logisticsService.estimateFreightAndDelivery({ productId, destinationPincode, quantity });
             res.status(200).json(result);
         } catch (error) {
             res.status(400).json({ success: false, message: error.message });
@@ -19,11 +19,12 @@ class LogisticsController {
      */
     async bookShipment(req, res) {
         try {
-            const { productId, destinationPincode } = req.body;
+            const { productId, destinationPincode, quantity } = req.body;
             const shipment = await logisticsService.createShipment({
                 productId,
                 buyerId: req.user._id,
-                destinationPincode
+                destinationPincode,
+                quantity
             });
             res.status(201).json({
                 success: true,
